@@ -33,16 +33,91 @@ A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JT
 4. Right-click the app and select **"Open"** (not double-click) for the first launch
 5. After the first launch, it will open normally with a double-click
 
-### Option 2: Build from Source
+### Option 2: Build from Source and Create .app Bundle
 
-Requires Xcode Command Line Tools.
+Requires Xcode Command Line Tools (`xcode-select --install`).
+
+#### Step 1: Clone and Build
 
 ```bash
 git clone https://github.com/vu2cpl/FT8ClusterAggregator-macOS.git
 cd FT8ClusterAggregator-macOS
 swift build -c release
-open .build/release/FT8ClusterAggregator
 ```
+
+#### Step 2: Create the .app Bundle
+
+```bash
+# Create bundle directory structure
+mkdir -p FT8ClusterAggregator.app/Contents/MacOS
+mkdir -p FT8ClusterAggregator.app/Contents/Resources
+
+# Copy the built binary
+cp .build/release/FT8ClusterAggregator FT8ClusterAggregator.app/Contents/MacOS/
+
+# Copy the app icon
+cp AppIcon.icns FT8ClusterAggregator.app/Contents/Resources/
+
+# Create PkgInfo
+echo -n "APPL????" > FT8ClusterAggregator.app/Contents/PkgInfo
+
+# Create Info.plist
+cat > FT8ClusterAggregator.app/Contents/Info.plist << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>FT8ClusterAggregator</string>
+    <key>CFBundleDisplayName</key>
+    <string>FT8 Cluster Aggregator</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.vu2cpl.ft8clusteraggregator</string>
+    <key>CFBundleVersion</key>
+    <string>1.2.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.2.0</string>
+    <key>CFBundleExecutable</key>
+    <string>FT8ClusterAggregator</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>FT8 Cluster Aggregator needs network access to receive WSJT-X spots, connect to DX cluster nodes, and broadcast cluster data.</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
+</dict>
+</plist>
+EOF
+```
+
+#### Step 3: Sign and Run
+
+```bash
+# Ad-hoc code sign
+codesign --force --deep --sign - FT8ClusterAggregator.app
+
+# Launch the app
+open FT8ClusterAggregator.app
+```
+
+#### Optional: Install to Applications
+
+```bash
+cp -r FT8ClusterAggregator.app /Applications/
+```
+
+> **Note:** If sharing the built `.app` with others, they will need to run
+> `xattr -cr /path/to/FT8ClusterAggregator.app` and right-click > Open on first launch
+> (see Option 1 above).
 
 ## Quick Start
 
