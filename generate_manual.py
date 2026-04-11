@@ -262,6 +262,9 @@ def build_toc():
         ("1.", "Introduction"),
         ("2.", "System Requirements"),
         ("3.", "Installation"),
+        ("", "3.1  From Pre-built App Bundle"),
+        ("", "3.2  Building from Source"),
+        ("", "3.3  Creating the .app Bundle"),
         ("4.", "Getting Started"),
         ("", "4.1  Main Window Overview"),
         ("", "4.2  Setting Your Callsign"),
@@ -386,14 +389,98 @@ def build_content():
         styles['BulletItem']
     ))
 
-    elements.append(Paragraph("3.2  Building from Source", styles['SectionTitle']))
     elements.append(Paragraph(
-        "If you have the source code and Xcode Command Line Tools installed:",
+        "Alternatively, open Terminal and run the following command to bypass Gatekeeper:",
         styles['Body']
     ))
-    elements.append(Paragraph("cd FT8ClusterAggregator", styles['CodeBlock']))
+    elements.append(Paragraph("xattr -cr /path/to/FT8ClusterAggregator.app", styles['CodeBlock']))
+    elements.append(Paragraph(
+        "Then right-click the app and select \"Open\" for the first launch. After that it will "
+        "open normally with a double-click.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("3.2  Building from Source", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "If you have the source code and Xcode Command Line Tools installed "
+        "(install with: xcode-select --install):",
+        styles['Body']
+    ))
+    elements.append(Paragraph("Step 1: Clone and build", styles['SubSection']))
+    elements.append(Paragraph("git clone https://github.com/vu2cpl/FT8ClusterAggregator-macOS.git", styles['CodeBlock']))
+    elements.append(Paragraph("cd FT8ClusterAggregator-macOS", styles['CodeBlock']))
     elements.append(Paragraph("swift build -c release", styles['CodeBlock']))
-    elements.append(Paragraph("open .build/release/FT8ClusterAggregator", styles['CodeBlock']))
+
+    elements.append(Paragraph("3.3  Creating the .app Bundle", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "After building from source, you can create a proper macOS .app bundle that can be "
+        "launched from Finder, placed in the Dock, or copied to /Applications:",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("Step 1: Create the bundle directory structure", styles['SubSection']))
+    elements.append(Paragraph("mkdir -p FT8ClusterAggregator.app/Contents/MacOS", styles['CodeBlock']))
+    elements.append(Paragraph("mkdir -p FT8ClusterAggregator.app/Contents/Resources", styles['CodeBlock']))
+
+    elements.append(Paragraph("Step 2: Copy the binary and icon", styles['SubSection']))
+    elements.append(Paragraph("cp .build/release/FT8ClusterAggregator FT8ClusterAggregator.app/Contents/MacOS/", styles['CodeBlock']))
+    elements.append(Paragraph("cp AppIcon.icns FT8ClusterAggregator.app/Contents/Resources/", styles['CodeBlock']))
+    elements.append(Paragraph('echo -n "APPL????" > FT8ClusterAggregator.app/Contents/PkgInfo', styles['CodeBlock']))
+
+    elements.append(Paragraph("Step 3: Create the Info.plist", styles['SubSection']))
+    elements.append(Paragraph(
+        "Create the file FT8ClusterAggregator.app/Contents/Info.plist with the following content "
+        "(a template is provided in the project README):",
+        styles['Body']
+    ))
+
+    plist_fields = [
+        ['Key', 'Value'],
+        ['CFBundleName', 'FT8ClusterAggregator'],
+        ['CFBundleDisplayName', 'FT8 Cluster Aggregator'],
+        ['CFBundleIdentifier', 'com.vu2cpl.ft8clusteraggregator'],
+        ['CFBundleVersion', '1.2.0'],
+        ['CFBundleExecutable', 'FT8ClusterAggregator'],
+        ['CFBundlePackageType', 'APPL'],
+        ['CFBundleIconFile', 'AppIcon'],
+        ['LSMinimumSystemVersion', '14.0'],
+        ['NSHighResolutionCapable', 'true'],
+    ]
+
+    plist_table = Table(plist_fields, colWidths=[180, 280])
+    plist_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), NAVY),
+        ('TEXTCOLOR', (0, 0), (-1, 0), white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('BACKGROUND', (0, 1), (-1, -1), LIGHT_BG),
+        ('GRID', (0, 0), (-1, -1), 0.5, grey),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('FONTNAME', (0, 1), (-1, -1), 'Courier'),
+    ]))
+    elements.append(plist_table)
+
+    elements.append(Paragraph(
+        "The full Info.plist XML template is available in the project README on GitHub.",
+        styles['Note']
+    ))
+
+    elements.append(Paragraph("Step 4: Sign and launch", styles['SubSection']))
+    elements.append(Paragraph("codesign --force --deep --sign - FT8ClusterAggregator.app", styles['CodeBlock']))
+    elements.append(Paragraph("open FT8ClusterAggregator.app", styles['CodeBlock']))
+
+    elements.append(Paragraph("Step 5 (Optional): Install to Applications", styles['SubSection']))
+    elements.append(Paragraph("cp -r FT8ClusterAggregator.app /Applications/", styles['CodeBlock']))
+
+    elements.append(Paragraph(
+        "If sharing the built .app with others, they will need to run "
+        "xattr -cr /path/to/FT8ClusterAggregator.app and right-click > Open on the first launch, "
+        "as the app is not notarised through the Apple Developer Program.",
+        styles['Note']
+    ))
 
     # Chapter 4: Getting Started
     elements.append(PageBreak())
