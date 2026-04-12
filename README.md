@@ -45,6 +45,13 @@ cd FT8ClusterAggregator-macOS
 swift build -c release
 ```
 
+> **Important for macOS 26 (Tahoe) users:** If you are building on macOS 26, the binary will
+> link against SDK 26 and **will not run on macOS 15 or earlier**. To build a compatible binary,
+> use the macOS 15 SDK:
+> ```bash
+> SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk swift build -c release
+> ```
+
 #### Step 2: Create the .app Bundle
 
 ```bash
