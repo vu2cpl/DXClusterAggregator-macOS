@@ -466,7 +466,8 @@ struct ContentView: View {
             Divider()
 
             ScrollViewReader { proxy in
-                List(spots) { spot in
+                let visible = displayedSpots
+                List(visible) { spot in
                     HStack(spacing: 0) {
                         Text(alertIcon(spot.alertLevel)).frame(width: 20, alignment: .leading)
                         Text(spot.timeString).frame(width: 55, alignment: .leading)
@@ -490,8 +491,8 @@ struct ContentView: View {
                     .id(spot.id)
                 }
                 .listStyle(.plain)
-                .onChange(of: spots.count) { _, _ in
-                    if let last = spots.last {
+                .onChange(of: visible.count) { _, _ in
+                    if let last = visible.last {
                         proxy.scrollTo(last.id, anchor: .bottom)
                     }
                 }
@@ -542,7 +543,7 @@ struct ContentView: View {
 
             Spacer()
 
-            Text("\(spots.count) spots")
+            Text("\(displayedSpots.count) / \(spots.count) spots")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -648,15 +649,17 @@ struct ContentView: View {
             sourceName: sourceName
         )
 
-        if settings.cqOnly && !spot.isCQ { return }
-
         classifySpot(&spot)
-        if settings.newOnly && !isNewAlert(spot.alertLevel) { return }
+
+        // Always store the spot; filters below apply to display + rebroadcast.
         spots.append(spot)
 
-        let clusterMessage = ClusterFormatter.format(spot: spot, spotter: settings.callsign)
-        tcpServer.broadcast(clusterMessage)
-        udpBroadcaster.broadcast(clusterMessage)
+        // CQ filter and New filter apply to rebroadcast (gated live by current toggle state).
+        if shouldShow(spot) {
+            let clusterMessage = ClusterFormatter.format(spot: spot, spotter: settings.callsign)
+            tcpServer.broadcast(clusterMessage)
+            udpBroadcaster.broadcast(clusterMessage)
+        }
     }
 
     private func isNewAlert(_ level: AlertLevel) -> Bool {
@@ -664,6 +667,16 @@ struct ContentView: View {
         case .newDXCC, .newSlot, .newBand, .newMode: return true
         case .worked, .none: return false
         }
+    }
+
+    private func shouldShow(_ spot: FT8SpotMessage) -> Bool {
+        if settings.cqOnly && !spot.isCQ { return false }
+        if settings.newOnly && !isNewAlert(spot.alertLevel) { return false }
+        return true
+    }
+
+    private var displayedSpots: [FT8SpotMessage] {
+        spots.filter { shouldShow($0) }
     }
 
     @MainActor
@@ -701,16 +714,14 @@ struct ContentView: View {
             sourceName: clusterSpot.sourceName
         )
 
-        if settings.cqOnly && !spot.isCQ { return }
-
         classifySpot(&spot)
-        if settings.newOnly && !isNewAlert(spot.alertLevel) { return }
         spots.append(spot)
 
-        // Re-broadcast the original spot line
-        let clusterMessage = ClusterFormatter.format(spot: spot, spotter: clusterSpot.spotter)
-        tcpServer.broadcast(clusterMessage)
-        udpBroadcaster.broadcast(clusterMessage)
+        if shouldShow(spot) {
+            let clusterMessage = ClusterFormatter.format(spot: spot, spotter: clusterSpot.spotter)
+            tcpServer.broadcast(clusterMessage)
+            udpBroadcaster.broadcast(clusterMessage)
+        }
     }
 
     @MainActor
