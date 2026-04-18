@@ -423,6 +423,8 @@ struct ContentView: View {
     private var controlSection: some View {
         HStack {
             Toggle("CQ Only", isOn: $settings.cqOnly)
+            Toggle("New Only", isOn: $settings.newOnly)
+                .help("Show only spots matching an enabled ClubLog alert (new DXCC/slot/band/mode)")
             Toggle("Minimize on Start", isOn: $settings.minimizeOnStart)
 
             Spacer()
@@ -649,11 +651,19 @@ struct ContentView: View {
         if settings.cqOnly && !spot.isCQ { return }
 
         classifySpot(&spot)
+        if settings.newOnly && !isNewAlert(spot.alertLevel) { return }
         spots.append(spot)
 
         let clusterMessage = ClusterFormatter.format(spot: spot, spotter: settings.callsign)
         tcpServer.broadcast(clusterMessage)
         udpBroadcaster.broadcast(clusterMessage)
+    }
+
+    private func isNewAlert(_ level: AlertLevel) -> Bool {
+        switch level {
+        case .newDXCC, .newSlot, .newBand, .newMode: return true
+        case .worked, .none: return false
+        }
     }
 
     @MainActor
@@ -694,6 +704,7 @@ struct ContentView: View {
         if settings.cqOnly && !spot.isCQ { return }
 
         classifySpot(&spot)
+        if settings.newOnly && !isNewAlert(spot.alertLevel) { return }
         spots.append(spot)
 
         // Re-broadcast the original spot line

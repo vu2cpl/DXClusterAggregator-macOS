@@ -280,7 +280,8 @@ def build_toc():
         ("8.", "Monitoring & Spot Aggregation"),
         ("", "8.1  Starting Monitoring"),
         ("", "8.2  CQ-Only Filter"),
-        ("", "8.3  Understanding the Spots Table"),
+        ("", "8.3  New-Only Filter"),
+        ("", "8.4  Understanding the Spots Table"),
         ("9.", "ClubLog Integration & DX Alerts"),
         ("", "9.1  Required Credentials"),
         ("", "9.2  Configuration and Refresh"),
@@ -774,7 +775,23 @@ def build_content():
         styles['Body']
     ))
 
-    elements.append(Paragraph("8.3  Understanding the Spots Table", styles['SectionTitle']))
+    elements.append(Paragraph("8.3  New-Only Filter", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "Enable the <b>New Only</b> toggle to filter spots so that only those matching an "
+        "enabled ClubLog alert are displayed and rebroadcast. A spot passes the filter if its "
+        "classification is New DXCC, New Slot, New Band, or New Mode (whichever you have "
+        "enabled in the ClubLog section). Worked stations and unclassified spots are hidden. "
+        "This filter requires ClubLog data to be loaded via Refresh - without log data, every "
+        "spot is unclassified and nothing will be shown.",
+        styles['Body']
+    ))
+    elements.append(Paragraph(
+        "Tip: combine <b>CQ Only</b> + <b>New Only</b> for the cleanest possible feed - only "
+        "stations calling CQ that you actually need.",
+        styles['Note']
+    ))
+
+    elements.append(Paragraph("8.4  Understanding the Spots Table", styles['SectionTitle']))
     elements.append(Paragraph(
         "The spots table displays all aggregated spots in real-time:",
         styles['Body']

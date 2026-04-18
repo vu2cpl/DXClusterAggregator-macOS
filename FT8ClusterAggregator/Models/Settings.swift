@@ -31,6 +31,7 @@ class AppSettings: ObservableObject {
     @AppStorage("broadcastIP2") var broadcastIP2: String = "127.0.0.1"
     @AppStorage("broadcastPort2") var broadcastPort2: Int = 2239
     @AppStorage("cqOnly") var cqOnly: Bool = false
+    @AppStorage("newOnly") var newOnly: Bool = false
     @AppStorage("minimizeOnStart") var minimizeOnStart: Bool = false
 
     @Published var udpSources: [UDPSource] {
