@@ -13,6 +13,11 @@ struct FT8SpotMessage: Identifiable {
     let dialFrequency: UInt64
     let sourceName: String
 
+    // Alert classification (set by ContentView before appending)
+    var alertLevel: AlertLevel = .none
+    var dxccName: String? = nil
+    var bandName: String? = nil
+
     var frequencyMHz: Double {
         Double(dialFrequency + UInt64(deltaFrequency)) / 1_000_000.0
     }

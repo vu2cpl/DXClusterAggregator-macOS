@@ -230,7 +230,7 @@ def build_cover():
     elements.append(Spacer(1, 8 * mm))
     elements.append(Paragraph("User Manual", styles['CoverSubtitle']))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(Paragraph("Version 1.2.0", styles['CoverVersion']))
+    elements.append(Paragraph("Version 1.3.0", styles['CoverVersion']))
     elements.append(Spacer(1, 30 * mm))
 
     elements.append(Paragraph("Aggregate FT8/FT4 spots from multiple WSJT-X/JTDX instances", styles['Credits']))
@@ -281,9 +281,13 @@ def build_toc():
         ("", "8.1  Starting Monitoring"),
         ("", "8.2  CQ-Only Filter"),
         ("", "8.3  Understanding the Spots Table"),
-        ("9.", "Connecting Logging Software"),
-        ("10.", "Troubleshooting"),
-        ("11.", "Credits & Acknowledgements"),
+        ("9.", "ClubLog Integration & DX Alerts"),
+        ("", "9.1  Required Credentials"),
+        ("", "9.2  Configuration and Refresh"),
+        ("", "9.3  Alert Types and Highlighting"),
+        ("10.", "Connecting Logging Software"),
+        ("11.", "Troubleshooting"),
+        ("12.", "Credits & Acknowledgements"),
     ]
 
     for num, title in toc_items:
@@ -808,8 +812,128 @@ def build_content():
         styles['Note']
     ))
 
-    # Chapter 9: Connecting Logging Software
-    elements.append(Paragraph("9. Connecting Logging Software", styles['ChapterTitle']))
+    # Chapter 9: ClubLog Integration
+    elements.append(PageBreak())
+    elements.append(Paragraph("9. ClubLog Integration & DX Alerts", styles['ChapterTitle']))
+    elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
+
+    elements.append(Paragraph(
+        "The ClubLog integration (new in v1.3.0) downloads your personal log from ClubLog and "
+        "classifies each incoming spot as new DXCC, new slot, new band, new mode, or already worked. "
+        "Spots are color-highlighted in the spots table so you can instantly see which stations "
+        "are worth working.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("9.1  Required Credentials", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "You will need the following from your ClubLog account (free at https://clublog.org):",
+        styles['Body']
+    ))
+
+    cred_fields = [
+        ['Field', 'What it is', 'Where to get it'],
+        ['Callsign', 'Your amateur radio callsign', 'Your ClubLog account callsign'],
+        ['Email', 'Email address registered with ClubLog', 'Your ClubLog account email'],
+        ['App Password', 'Token for API access (NOT your login password)', 'ClubLog > Settings > App Passwords'],
+        ['API Key', 'Developer key for country file download', 'https://clublog.org/requestapikey.php'],
+    ]
+
+    cred_table = Table(cred_fields, colWidths=[80, 180, 200])
+    cred_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), NAVY),
+        ('TEXTCOLOR', (0, 0), (-1, 0), white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('BACKGROUND', (0, 1), (-1, -1), LIGHT_BG),
+        ('GRID', (0, 0), (-1, -1), 0.5, grey),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    elements.append(cred_table)
+
+    elements.append(Paragraph(
+        "All credentials are stored locally on your Mac in UserDefaults. They are not transmitted "
+        "anywhere except to ClubLog's own servers when you click Refresh.",
+        styles['Note']
+    ))
+
+    elements.append(Paragraph("9.2  Configuration and Refresh", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "In the ClubLog Integration section:",
+        styles['Body']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> Enter your <b>Callsign</b>, <b>Email</b>, <b>App Password</b>, and <b>API Key</b>",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> Select which <b>Alert Types</b> you want highlighted (New DXCC, New Slot, New Band, New Mode)",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> Click <b>Refresh from ClubLog</b> - this downloads the country file and your full ADIF log",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> Wait for the status message to show the QSO and DXCC count (depending on log size, this may take 30-120 seconds)",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "The downloaded data is cached locally at "
+        "~/Library/Application Support/FT8ClusterAggregator/ so the app loads instantly on next "
+        "launch without re-downloading. You should refresh periodically (e.g. after each logging "
+        "session) to keep the worked-status data up to date.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("9.3  Alert Types and Highlighting", styles['SectionTitle']))
+
+    alert_fields = [
+        ['Indicator', 'Level', 'Meaning'],
+        ['🔴 red row', 'New DXCC', 'You have never worked this DXCC entity'],
+        ['🟠 orange row', 'New Slot', 'You have worked this DXCC but not on this band+mode combination'],
+        ['🟡 yellow row', 'New Band', 'You have worked this DXCC but not on this band (any mode)'],
+        ['🟡 yellow row', 'New Mode', 'You have worked this DXCC but not in this mode (any band)'],
+        ['⚪ no highlight', 'Worked', 'You have already worked this station/slot - not needed'],
+        ['(blank)', 'Unknown', 'Classification not possible (DXCC not resolved, or no log data loaded)'],
+    ]
+
+    alert_table = Table(alert_fields, colWidths=[110, 80, 270])
+    alert_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), NAVY),
+        ('TEXTCOLOR', (0, 0), (-1, 0), white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('BACKGROUND', (0, 1), (-1, -1), LIGHT_BG),
+        ('GRID', (0, 0), (-1, -1), 0.5, grey),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    elements.append(alert_table)
+
+    elements.append(Paragraph(
+        "Priority order: New DXCC beats New Slot beats New Band beats New Mode beats Worked. "
+        "If you disable a specific alert type via the toggle, spots at that level are displayed "
+        "as Worked (no highlight).",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph(
+        "The spots table now includes two extra columns: <b>DXCC</b> (the entity name, e.g. "
+        "\"UNITED STATES\") and <b>Band</b> (e.g. \"20M\"). A small colored indicator appears at "
+        "the far-left of each row showing the alert level at a glance.",
+        styles['Body']
+    ))
+
+    elements.append(PageBreak())
+    elements.append(Paragraph("10. Connecting Logging Software", styles['ChapterTitle']))
     elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
 
     elements.append(Paragraph(
@@ -858,9 +982,9 @@ def build_content():
     ))
     elements.append(Paragraph("telnet 127.0.0.1 7550", styles['CodeBlock']))
 
-    # Chapter 10: Troubleshooting
+    # Chapter 11: Troubleshooting
     elements.append(PageBreak())
-    elements.append(Paragraph("10. Troubleshooting", styles['ChapterTitle']))
+    elements.append(Paragraph("11. Troubleshooting", styles['ChapterTitle']))
     elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
 
     trouble_data = [
@@ -899,7 +1023,7 @@ def build_content():
 
     # Chapter 11: Credits
     elements.append(PageBreak())
-    elements.append(Paragraph("11. Credits & Acknowledgements", styles['ChapterTitle']))
+    elements.append(Paragraph("12. Credits & Acknowledgements", styles['ChapterTitle']))
     elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
 
     elements.append(Spacer(1, 10 * mm))

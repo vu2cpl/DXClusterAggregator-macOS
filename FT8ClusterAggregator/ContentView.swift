@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var settings: AppSettings
     @StateObject private var tcpServer = ClusterTCPServer()
+    @StateObject private var clubLogClient = ClubLogClient()
 
     @State private var udpListeners: [UUID: WSJTXUDPListener] = [:]
     @State private var dxClusterClients: [UUID: DXClusterClient] = [:]
@@ -21,6 +22,8 @@ struct ContentView: View {
                 Divider()
                 dxClusterSection
                 Divider()
+                clubLogSection
+                Divider()
                 controlSection
                 Divider()
                 spotsTable
@@ -28,7 +31,10 @@ struct ContentView: View {
             }
             .padding()
         }
-        .frame(minWidth: 750, minHeight: 650)
+        .frame(minWidth: 800, minHeight: 750)
+        .onAppear {
+            clubLogClient.loadCachedData()
+        }
     }
 
     // MARK: - Header
@@ -309,6 +315,109 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - ClubLog Section
+
+    private var clubLogSection: some View {
+        GroupBox("ClubLog Integration") {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Text("Callsign:").frame(width: 70, alignment: .trailing)
+                    TextField("VU2CPL", text: $settings.clubLog.callsign)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 100)
+                        .disableAutocorrection(true)
+                        .disabled(clubLogClient.isRefreshing)
+
+                    Text("Email:").frame(width: 50, alignment: .trailing)
+                    TextField("you@example.com", text: $settings.clubLog.email)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 180)
+                        .disableAutocorrection(true)
+                        .disabled(clubLogClient.isRefreshing)
+
+                    Spacer()
+                }
+
+                HStack(spacing: 8) {
+                    Text("App Pwd:").frame(width: 70, alignment: .trailing)
+                    SecureField("ClubLog app password", text: $settings.clubLog.appPassword)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 180)
+                        .disabled(clubLogClient.isRefreshing)
+
+                    Text("API Key:").frame(width: 60, alignment: .trailing)
+                    SecureField("Developer API key", text: $settings.clubLog.apiKey)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 180)
+                        .disabled(clubLogClient.isRefreshing)
+
+                    Spacer()
+                }
+
+                HStack {
+                    Text("Alerts:").bold()
+                    Toggle("New DXCC", isOn: $settings.clubLog.alertNewDXCC)
+                    Toggle("New Slot", isOn: $settings.clubLog.alertNewSlot)
+                    Toggle("New Band", isOn: $settings.clubLog.alertNewBand)
+                    Toggle("New Mode", isOn: $settings.clubLog.alertNewMode)
+                    Spacer()
+                }
+                .font(.caption)
+
+                HStack {
+                    Button(action: refreshClubLog) {
+                        if clubLogClient.isRefreshing {
+                            ProgressView().controlSize(.small).padding(.trailing, 4)
+                            Text("Refreshing...")
+                        } else {
+                            Label("Refresh from ClubLog", systemImage: "arrow.clockwise.circle")
+                        }
+                    }
+                    .disabled(clubLogClient.isRefreshing)
+
+                    Spacer()
+
+                    Text(clubLogClient.statusMessage)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func refreshClubLog() {
+        Task {
+            await clubLogClient.refresh(config: settings.clubLog)
+            // Persist timing info
+            settings.clubLog.lastRefresh = clubLogClient.lastRefresh
+            settings.clubLog.qsoCount = clubLogClient.qsoCount
+        }
+    }
+
+    private func alertColor(_ level: AlertLevel) -> Color {
+        switch level {
+        case .newDXCC: return Color.red.opacity(0.25)
+        case .newSlot: return Color.orange.opacity(0.25)
+        case .newBand: return Color.yellow.opacity(0.25)
+        case .newMode: return Color.yellow.opacity(0.15)
+        case .worked:  return Color.clear
+        case .none:    return Color.clear
+        }
+    }
+
+    private func alertIcon(_ level: AlertLevel) -> String {
+        switch level {
+        case .newDXCC: return "🔴"
+        case .newSlot: return "🟠"
+        case .newBand: return "🟡"
+        case .newMode: return "🟡"
+        case .worked:  return "⚪"
+        case .none:    return ""
+        }
+    }
+
     // MARK: - Controls
 
     private var controlSection: some View {
@@ -336,13 +445,16 @@ struct ContentView: View {
     private var spotsTable: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 0) {
-                Text("Time").frame(width: 60, alignment: .leading)
-                Text("Source").frame(width: 80, alignment: .leading)
-                Text("Callsign").frame(width: 100, alignment: .leading)
-                Text("Freq (MHz)").frame(width: 100, alignment: .trailing)
-                Text("SNR").frame(width: 50, alignment: .trailing)
-                Text("Mode").frame(width: 60, alignment: .leading)
-                Text("Message").frame(minWidth: 200, alignment: .leading)
+                Text("").frame(width: 20, alignment: .leading)
+                Text("Time").frame(width: 55, alignment: .leading)
+                Text("Source").frame(width: 70, alignment: .leading)
+                Text("Callsign").frame(width: 90, alignment: .leading)
+                Text("DXCC").frame(width: 110, alignment: .leading)
+                Text("Freq (MHz)").frame(width: 85, alignment: .trailing)
+                Text("Band").frame(width: 45, alignment: .leading)
+                Text("SNR").frame(width: 40, alignment: .trailing)
+                Text("Mode").frame(width: 50, alignment: .leading)
+                Text("Message").frame(minWidth: 150, alignment: .leading)
             }
             .font(.caption.bold())
             .padding(.horizontal, 8)
@@ -354,18 +466,25 @@ struct ContentView: View {
             ScrollViewReader { proxy in
                 List(spots) { spot in
                     HStack(spacing: 0) {
-                        Text(spot.timeString).frame(width: 60, alignment: .leading)
-                        Text(spot.sourceName).frame(width: 80, alignment: .leading)
+                        Text(alertIcon(spot.alertLevel)).frame(width: 20, alignment: .leading)
+                        Text(spot.timeString).frame(width: 55, alignment: .leading)
+                        Text(spot.sourceName).frame(width: 70, alignment: .leading)
                             .foregroundColor(.secondary)
-                        Text(spot.dxCallsign ?? "-").frame(width: 100, alignment: .leading)
-                        Text(String(format: "%.3f", spot.frequencyMHz)).frame(width: 100, alignment: .trailing)
-                        Text("\(spot.snr)").frame(width: 50, alignment: .trailing)
-                        Text(spot.mode).frame(width: 60, alignment: .leading)
-                        Text(spot.message).frame(minWidth: 200, alignment: .leading)
+                        Text(spot.dxCallsign ?? "-").frame(width: 90, alignment: .leading)
+                            .bold(spot.alertLevel == .newDXCC || spot.alertLevel == .newSlot)
+                        Text(spot.dxccName ?? "").frame(width: 110, alignment: .leading)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                        Text(String(format: "%.3f", spot.frequencyMHz)).frame(width: 85, alignment: .trailing)
+                        Text(spot.bandName ?? "").frame(width: 45, alignment: .leading)
+                            .foregroundColor(.secondary)
+                        Text("\(spot.snr)").frame(width: 40, alignment: .trailing)
+                        Text(spot.mode).frame(width: 50, alignment: .leading)
+                        Text(spot.message).frame(minWidth: 150, alignment: .leading)
                     }
                     .font(.system(.caption, design: .monospaced))
                     .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
-                    .background(spot.isCQ ? Color.green.opacity(0.1) : Color.clear)
+                    .background(alertColor(spot.alertLevel))
                     .id(spot.id)
                 }
                 .listStyle(.plain)
@@ -514,7 +633,7 @@ struct ContentView: View {
         let dialFreq = udpListeners[sourceId]?.dialFrequency ?? 0
         let sourceName = udpListeners[sourceId]?.name ?? "Unknown"
 
-        let spot = FT8SpotMessage(
+        var spot = FT8SpotMessage(
             time: Self.timeFromMilliseconds(decode.time),
             snr: decode.snr,
             deltaTime: decode.deltaTime,
@@ -529,6 +648,7 @@ struct ContentView: View {
 
         if settings.cqOnly && !spot.isCQ { return }
 
+        classifySpot(&spot)
         spots.append(spot)
 
         let clusterMessage = ClusterFormatter.format(spot: spot, spotter: settings.callsign)
@@ -558,7 +678,7 @@ struct ContentView: View {
             }
         }
 
-        let spot = FT8SpotMessage(
+        var spot = FT8SpotMessage(
             time: Date(),
             snr: snr,
             deltaTime: 0,
@@ -573,12 +693,30 @@ struct ContentView: View {
 
         if settings.cqOnly && !spot.isCQ { return }
 
+        classifySpot(&spot)
         spots.append(spot)
 
         // Re-broadcast the original spot line
         let clusterMessage = ClusterFormatter.format(spot: spot, spotter: clusterSpot.spotter)
         tcpServer.broadcast(clusterMessage)
         udpBroadcaster.broadcast(clusterMessage)
+    }
+
+    @MainActor
+    private func classifySpot(_ spot: inout FT8SpotMessage) {
+        let classifier = AlertClassifier(
+            matrix: clubLogClient.matrix,
+            resolver: clubLogClient.resolver,
+            config: settings.clubLog
+        )
+        let result = classifier.classify(
+            callsign: spot.dxCallsign,
+            frequencyMHz: spot.frequencyMHz,
+            mode: spot.mode
+        )
+        spot.alertLevel = result.level
+        spot.dxccName = result.dxccName
+        spot.bandName = result.band
     }
 
     private func clearSpots() {

@@ -41,9 +41,14 @@ class AppSettings: ObservableObject {
         didSet { saveCodable(dxClusterSources, key: "dxClusterSources") }
     }
 
+    @Published var clubLog: ClubLogConfig {
+        didSet { saveCodable(clubLog, key: "clubLogConfig") }
+    }
+
     init() {
         self.udpSources = Self.loadCodable(key: "udpSources") ?? UDPSource.defaultSources
         self.dxClusterSources = Self.loadCodable(key: "dxClusterSources") ?? []
+        self.clubLog = Self.loadCodable(key: "clubLogConfig") ?? ClubLogConfig()
     }
 
     private static func loadCodable<T: Codable>(key: String) -> T? {

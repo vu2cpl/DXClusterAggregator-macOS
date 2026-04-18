@@ -6,6 +6,7 @@ A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JT
 
 - **Multiple UDP Sources** — Connect to several WSJT-X/JTDX instances simultaneously
 - **DX Cluster Nodes** — Connect to telnet DX cluster servers with auto-authentication
+- **ClubLog Integration** — Download your log and highlight spots for new DXCC / new slot / new band / new mode (configurable)
 - **Built-in Telnet Cluster Server** — Feed aggregated spots to Logger32, N1MM+, Log4OM, or any logging software
 - **Dual UDP Broadcast** — Forward spots to two UDP destinations
 - **CQ-Only Filter** — Filter to show only CQ calls
