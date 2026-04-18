@@ -400,8 +400,8 @@ struct ContentView: View {
         switch level {
         case .newDXCC: return Color.red.opacity(0.25)
         case .newSlot: return Color.orange.opacity(0.25)
-        case .newBand: return Color.yellow.opacity(0.25)
-        case .newMode: return Color.yellow.opacity(0.15)
+        case .newBand: return Color.blue.opacity(0.25)
+        case .newMode: return Color(red: 1.0, green: 0.75, blue: 0.0).opacity(0.30) // amber
         case .worked:  return Color.clear
         case .none:    return Color.clear
         }
@@ -411,7 +411,7 @@ struct ContentView: View {
         switch level {
         case .newDXCC: return "🔴"
         case .newSlot: return "🟠"
-        case .newBand: return "🟡"
+        case .newBand: return "🔵"
         case .newMode: return "🟡"
         case .worked:  return "⚪"
         case .none:    return ""

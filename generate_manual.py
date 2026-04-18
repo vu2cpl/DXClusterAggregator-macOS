@@ -895,12 +895,21 @@ def build_content():
     alert_fields = [
         ['Indicator', 'Level', 'Meaning'],
         ['🔴 red row', 'New DXCC', 'You have never worked this DXCC entity'],
-        ['🟠 orange row', 'New Slot', 'You have worked this DXCC but not on this band+mode combination'],
-        ['🟡 yellow row', 'New Band', 'You have worked this DXCC but not on this band (any mode)'],
-        ['🟡 yellow row', 'New Mode', 'You have worked this DXCC but not in this mode (any band)'],
+        ['🟠 orange row', 'New Slot', 'You have worked this DXCC but not on this exact band+mode combination'],
+        ['🔵 blue row', 'New Band', 'You have worked this DXCC but not on this band (any mode)'],
+        ['🟡 amber row', 'New Mode', 'You have worked this DXCC but not in this mode (any band)'],
         ['⚪ no highlight', 'Worked', 'You have already worked this station/slot - not needed'],
         ['(blank)', 'Unknown', 'Classification not possible (DXCC not resolved, or no log data loaded)'],
     ]
+
+    elements.append(Paragraph(
+        "A <b>slot</b> means a specific DXCC + Band + Mode combination. For example, if you "
+        "have worked Japan on 20M FT8 and 40M CW, then a spot of a Japanese station on 15M FT8 "
+        "is a <b>new slot</b> - Japan is worked (so not new DXCC), 15M is worked (for other "
+        "entities), FT8 is worked, but this specific JA+15M+FT8 combination is not. Slots matter "
+        "for awards like 5BDXCC, 9BDXCC, and triple-play.",
+        styles['Body']
+    ))
 
     alert_table = Table(alert_fields, colWidths=[110, 80, 270])
     alert_table.setStyle(TableStyle([
