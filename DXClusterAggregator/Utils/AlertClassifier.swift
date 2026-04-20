@@ -12,6 +12,7 @@ struct AlertClassifier {
         let dxccId: Int?
         let dxccName: String?
         let band: String?
+        var isBeacon: Bool = false
     }
 
     /// Classify a spot. Returns `.none` if we lack data to decide (no matrix, no band, no DXCC).
@@ -27,9 +28,15 @@ struct AlertClassifier {
         let band = BandResolver.band(fromMHz: frequencyMHz)
 
         // Beacons / satellites / Internet gateways: ClubLog marks these with
-        // adif=0. Show them in the table as "Beacon" but never trigger alerts.
-        if resolver.isNonDXOperation(call) {
-            return Classification(level: .none, dxccId: nil, dxccName: "Beacon", band: band)
+        // adif=0. Also check our known-beacon database for NCDXF/IBP beacons
+        // which have meaningful location info. Never trigger alerts.
+        let knownBeacon = BeaconDatabase.displayName(for: call)
+        if resolver.isNonDXOperation(call) || knownBeacon != nil {
+            let label = knownBeacon ?? "Beacon"
+            return Classification(
+                level: .none, dxccId: nil, dxccName: label, band: band,
+                isBeacon: true
+            )
         }
 
         let dxccId = resolver.resolve(call)

@@ -668,7 +668,8 @@ struct ContentView: View {
                             .foregroundColor(.secondary)
                         Text("\(spot.snr)").frame(width: 40, alignment: .trailing)
                         Text(spot.mode).frame(width: 50, alignment: .leading)
-                        Text(spot.message).frame(minWidth: 150, alignment: .leading)
+                        Text(spot.displayMessage).frame(minWidth: 150, alignment: .leading)
+                            .foregroundColor(spot.isBeacon ? .secondary : .primary)
                     }
                     .font(.system(.caption, design: .monospaced))
                     .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
@@ -1112,6 +1113,7 @@ struct ContentView: View {
         spot.alertLevel = result.level
         spot.dxccName = result.dxccName
         spot.bandName = result.band
+        spot.isBeacon = result.isBeacon
     }
 
     private func clearSpots() {

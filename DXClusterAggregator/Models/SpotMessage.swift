@@ -17,6 +17,13 @@ struct SpotMessage: Identifiable {
     var alertLevel: AlertLevel = .none
     var dxccName: String? = nil
     var bandName: String? = nil
+    var isBeacon: Bool = false
+
+    /// Prefix the message with "[BEACON] " if this spot is from a known beacon
+    /// so the user sees it at a glance in the Message column.
+    var displayMessage: String {
+        isBeacon ? "[BEACON] \(message)" : message
+    }
 
     var frequencyMHz: Double {
         Double(dialFrequency + UInt64(deltaFrequency)) / 1_000_000.0
