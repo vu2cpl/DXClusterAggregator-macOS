@@ -14,6 +14,14 @@ struct ClubLogConfig: Codable, Equatable {
     var alertNewBand: Bool = false   // new band on known DXCC
     var alertNewMode: Bool = false   // new mode on known DXCC
 
+    /// When true, only confirmed QSOs (LOTW/QSL/eQSL) count as worked. A worked-but-unconfirmed
+    /// slot will then be classified as "new" (so users can re-work for confirmation).
+    var alertUnconfirmed: Bool = false
+
+    /// Bands to import from the ClubLog ADIF download. Empty = all bands.
+    /// Format matches BandResolver names ("160M", "80M", ...).
+    var importBands: Set<String> = []
+
     var lastRefresh: Date? = nil
     var qsoCount: Int = 0
 }

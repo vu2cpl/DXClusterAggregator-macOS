@@ -12,6 +12,22 @@ struct ADIFRecord {
     }
     var gridSquare: String? { fields["GRIDSQUARE"]?.uppercased() }
     var qsoDate: String? { fields["QSO_DATE"] }
+
+    /// QSO is considered confirmed if any of LOTW/QSL/eQSL is received (Y/y).
+    var isConfirmed: Bool {
+        let yes: Set<String> = ["Y", "V"] // V = verified
+        let candidates = [
+            fields["LOTW_QSL_RCVD"],
+            fields["QSL_RCVD"],
+            fields["EQSL_QSL_RCVD"]
+        ]
+        for v in candidates {
+            if let s = v?.uppercased(), yes.contains(s) { return true }
+        }
+        // Some loggers use "APP_CLUBLOG_QSO_QSL" or matched flag; treat ClubLog matched as confirmed
+        if let m = fields["APP_CLUBLOG_QSO_QSL"]?.uppercased(), m == "Y" { return true }
+        return false
+    }
 }
 
 /// Parses an ADIF v1/v2 text stream.

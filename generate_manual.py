@@ -230,7 +230,7 @@ def build_cover():
     elements.append(Spacer(1, 8 * mm))
     elements.append(Paragraph("User Manual", styles['CoverSubtitle']))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(Paragraph("Version 1.3.0", styles['CoverVersion']))
+    elements.append(Paragraph("Version 1.4.0", styles['CoverVersion']))
     elements.append(Spacer(1, 30 * mm))
 
     elements.append(Paragraph("Aggregate FT8/FT4 spots from multiple WSJT-X/JTDX instances", styles['Credits']))
@@ -285,7 +285,9 @@ def build_toc():
         ("9.", "ClubLog Integration & DX Alerts"),
         ("", "9.1  Required Credentials"),
         ("", "9.2  Configuration and Refresh"),
-        ("", "9.3  Alert Types and Highlighting"),
+        ("", "9.3  Band Filter for Import"),
+        ("", "9.4  Include Unconfirmed"),
+        ("", "9.5  Alert Types and Highlighting"),
         ("10.", "Connecting Logging Software"),
         ("11.", "Troubleshooting"),
         ("12.", "Credits & Acknowledgements"),
@@ -494,7 +496,10 @@ def build_content():
 
     elements.append(Paragraph("4.1  Main Window Overview", styles['SectionTitle']))
     elements.append(Paragraph(
-        "When you launch FT8ClusterAggregator, you will see the main window with the following sections from top to bottom:",
+        "When you launch FT8ClusterAggregator, you will see the main window with the following sections from top to bottom. "
+        "The <b>Hide Settings</b> button in the header collapses the entire configuration panel "
+        "(Configuration, UDP Sources, DX Cluster, ClubLog) so the spots table can use the full window. "
+        "Click <b>Show Settings</b> to bring the configuration back.",
         styles['Body']
     ))
 
@@ -907,7 +912,42 @@ def build_content():
         styles['Body']
     ))
 
-    elements.append(Paragraph("9.3  Alert Types and Highlighting", styles['SectionTitle']))
+    elements.append(Paragraph("9.3  Band Filter for Import", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "The <b>Import Bands</b> grid in the ClubLog section lets you choose which bands' QSOs "
+        "are imported from your ClubLog log. Useful if you only operate certain bands and want a "
+        "smaller, faster matrix.",
+        styles['Body']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> <b>All</b> button: import every band (default)",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> <b>HF Only</b> button: 160M through 10M",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> Individual band checkboxes: pick exactly the bands you want",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "Changes take effect on the next Refresh (the import filter is applied during ADIF parsing).",
+        styles['Note']
+    ))
+
+    elements.append(Paragraph("9.4  Include Unconfirmed", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "Enable the <b>Inc. Unconfirmed</b> toggle to make worked-but-unconfirmed slots count as "
+        "still needed. A slot is considered confirmed if any of LOTW_QSL_RCVD, QSL_RCVD, or "
+        "EQSL_QSL_RCVD is set to Y in the ADIF record (also recognises ClubLog's matched flag). "
+        "When this toggle is ON, the alert classifier compares against your confirmed slots only, "
+        "so QSOs awaiting confirmation will trigger New DXCC / New Slot / etc. alerts. This is "
+        "useful for award-chasers who want to re-work stations until confirmation is received.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("9.5  Alert Types and Highlighting", styles['SectionTitle']))
 
     alert_fields = [
         ['Indicator', 'Level', 'Meaning'],

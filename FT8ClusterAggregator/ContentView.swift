@@ -11,27 +11,35 @@ struct ContentView: View {
     @State private var spots: [FT8SpotMessage] = []
     @State private var isMonitoring = false
 
+    // Collapsible state for the configuration sections (settings panel)
+    @AppStorage("showSettings") private var showSettings: Bool = true
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                headerSection
+        VStack(spacing: 12) {
+            headerSection
+            Divider()
+            if showSettings {
+                ScrollView {
+                    VStack(spacing: 12) {
+                        configSection
+                        Divider()
+                        sourcesSection
+                        Divider()
+                        dxClusterSection
+                        Divider()
+                        clubLogSection
+                    }
+                }
+                .frame(maxHeight: 380)
                 Divider()
-                configSection
-                Divider()
-                sourcesSection
-                Divider()
-                dxClusterSection
-                Divider()
-                clubLogSection
-                Divider()
-                controlSection
-                Divider()
-                spotsTable
-                statusBar
             }
-            .padding()
+            controlSection
+            Divider()
+            spotsTable
+            statusBar
         }
-        .frame(minWidth: 800, minHeight: 750)
+        .padding()
+        .frame(minWidth: 800, minHeight: showSettings ? 800 : 500)
         .onAppear {
             clubLogClient.loadCachedData()
         }
@@ -44,8 +52,18 @@ struct ContentView: View {
             Text("FT8 Cluster Aggregator")
                 .font(.title2)
                 .fontWeight(.bold)
+
             Spacer()
-            Text("v1.2.0 (macOS)")
+
+            Button(action: { showSettings.toggle() }) {
+                Label(
+                    showSettings ? "Hide Settings" : "Show Settings",
+                    systemImage: showSettings ? "chevron.up.circle" : "chevron.down.circle"
+                )
+            }
+            .help("Collapse the settings panel for more space")
+
+            Text("v1.4.0 (macOS)")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -360,9 +378,38 @@ struct ContentView: View {
                     Toggle("New Slot", isOn: $settings.clubLog.alertNewSlot)
                     Toggle("New Band", isOn: $settings.clubLog.alertNewBand)
                     Toggle("New Mode", isOn: $settings.clubLog.alertNewMode)
+                    Toggle("Inc. Unconfirmed", isOn: $settings.clubLog.alertUnconfirmed)
+                        .help("Treat worked-but-unconfirmed (no LOTW/QSL/eQSL) as still needed")
                     Spacer()
                 }
                 .font(.caption)
+
+                // Band selector for ClubLog import
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Import Bands:").bold().font(.caption)
+                        Button("All") {
+                            settings.clubLog.importBands = []
+                        }
+                        .controlSize(.mini)
+                        Button("HF Only") {
+                            settings.clubLog.importBands = Set(["160M","80M","60M","40M","30M","20M","17M","15M","12M","10M"])
+                        }
+                        .controlSize(.mini)
+                        Button("None") {
+                            // Empty selection means "all" by convention; use a sentinel to show "no qsos"
+                            // Instead set to a single non-existent band to actually filter out everything
+                            settings.clubLog.importBands = ["__NONE__"]
+                        }
+                        .controlSize(.mini)
+                        Spacer()
+                        Text(settings.clubLog.importBands.isEmpty ? "All bands" : "\(settings.clubLog.importBands.count) selected")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    bandSelectorGrid
+                }
+                .padding(.top, 2)
 
                 HStack {
                     Button(action: refreshClubLog) {
@@ -384,6 +431,32 @@ struct ContentView: View {
                 }
             }
             .padding(.vertical, 4)
+        }
+    }
+
+    private var bandSelectorGrid: some View {
+        let allBands = ["160M","80M","60M","40M","30M","20M","17M","15M","12M","10M","6M","4M","2M","70CM"]
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
+            ForEach(allBands, id: \.self) { band in
+                let isAll = settings.clubLog.importBands.isEmpty
+                let isOnlyNone = settings.clubLog.importBands == ["__NONE__"]
+                let isSelected = isAll || (settings.clubLog.importBands.contains(band) && !isOnlyNone)
+                Toggle(band, isOn: Binding(
+                    get: { isSelected },
+                    set: { newValue in
+                        var current = isAll ? Set(allBands) : settings.clubLog.importBands
+                        if isOnlyNone { current = [] }
+                        if newValue { current.insert(band) } else { current.remove(band) }
+                        // If all selected, normalize to empty (= all)
+                        if current == Set(allBands) { current = [] }
+                        // If empty, mark as none-sentinel to actually filter everything out
+                        if current.isEmpty && !newValue { current = ["__NONE__"] }
+                        settings.clubLog.importBands = current
+                    }
+                ))
+                .toggleStyle(.checkbox)
+                .font(.caption2)
+            }
         }
     }
 

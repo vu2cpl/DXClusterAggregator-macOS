@@ -120,10 +120,15 @@ class ClubLogClient: ObservableObject {
 
             // Build matrix
             var newMatrix = LogMatrix()
+            let bandFilter = config.importBands  // empty = include all
             for record in records {
                 guard let call = record.call,
                       let band = record.band,
                       let mode = record.mode else { continue }
+
+                // Apply band filter (empty = all; sentinel "__NONE__" = filter everything out)
+                if bandFilter == ["__NONE__"] { continue }
+                if !bandFilter.isEmpty && !bandFilter.contains(band) { continue }
 
                 // Prefer explicit DXCC in ADIF, else resolve from callsign
                 let dxcc: Int?
@@ -134,7 +139,10 @@ class ClubLogClient: ObservableObject {
                 }
 
                 if let d = dxcc {
-                    newMatrix.record(dxcc: d, band: band, mode: mode, call: call)
+                    newMatrix.record(
+                        dxcc: d, band: band, mode: mode,
+                        call: call, confirmed: record.isConfirmed
+                    )
                 }
             }
 

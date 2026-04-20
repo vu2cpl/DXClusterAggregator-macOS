@@ -46,15 +46,26 @@ struct AlertClassifier {
             return .newDXCC
         }
 
+        // If alertUnconfirmed is on, treat unconfirmed as not-worked.
+        let bands = config.alertUnconfirmed ? status.confirmedBands : status.bands
+        let modes = config.alertUnconfirmed ? status.confirmedModes : status.modes
+        let slots = config.alertUnconfirmed ? status.confirmedSlots : status.slots
+
+        // If the entity has no confirmed contacts at all when in unconfirmed mode,
+        // treat as new DXCC for the purposes of confirmation hunting.
+        if config.alertUnconfirmed && bands.isEmpty && modes.isEmpty && slots.isEmpty {
+            return .newDXCC
+        }
+
         let slot = "\(band)-\(mode)"
-        if !status.slots.contains(slot) {
-            if !status.bands.contains(band) && !status.modes.contains(mode) {
+        if !slots.contains(slot) {
+            if !bands.contains(band) && !modes.contains(mode) {
                 return .newSlot
             }
-            if !status.bands.contains(band) {
+            if !bands.contains(band) {
                 return .newBand
             }
-            if !status.modes.contains(mode) {
+            if !modes.contains(mode) {
                 return .newMode
             }
             return .newSlot
