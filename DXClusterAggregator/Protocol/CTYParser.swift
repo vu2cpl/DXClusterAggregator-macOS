@@ -14,6 +14,15 @@ struct CTYPrefixRule {
     let call: String     // Prefix pattern, e.g. "K", "VU2", or exact call "K1JT"
     let adif: Int
     let isExact: Bool    // true for "exceptions", false for prefix matches
+    let startDate: Date? // rule valid from this date (nil = always)
+    let endDate: Date?   // rule valid until this date (nil = still active)
+
+    /// True if this rule applies at the given moment (defaults to now).
+    func isActive(at date: Date = Date()) -> Bool {
+        if let start = startDate, date < start { return false }
+        if let end = endDate, date > end { return false }
+        return true
+    }
 }
 
 /// Parses the ClubLog cty.xml file.
@@ -37,9 +46,18 @@ class CTYParser: NSObject, XMLParserDelegate {
     private var tmpContinent: String?
     private var tmpCall: String?
     private var tmpDeleted: Bool = false
+    private var tmpStart: Date?
+    private var tmpEnd: Date?
     private var inExceptions = false
     private var inPrefixes = false
     private var inEntities = false
+
+    // ISO-8601 parser with the timezone format used in ClubLog cty.xml
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
 
     func parse(data: Data) -> Bool {
         let parser = XMLParser(data: data)
@@ -87,6 +105,8 @@ class CTYParser: NSObject, XMLParserDelegate {
             tmpContinent = nil
             tmpCall = nil
             tmpDeleted = false
+            tmpStart = nil
+            tmpEnd = nil
         }
     }
 
@@ -118,7 +138,10 @@ class CTYParser: NSObject, XMLParserDelegate {
             } else if parent == "prefixes" {
                 // End of a top-level <prefix> record
                 if let adif = tmpAdif, let call = tmpCall {
-                    prefixRules.append(CTYPrefixRule(call: call.uppercased(), adif: adif, isExact: false))
+                    prefixRules.append(CTYPrefixRule(
+                        call: call.uppercased(), adif: adif, isExact: false,
+                        startDate: tmpStart, endDate: tmpEnd
+                    ))
                 }
             }
         case "call":
@@ -129,6 +152,10 @@ class CTYParser: NSObject, XMLParserDelegate {
             tmpContinent = value
         case "deleted":
             tmpDeleted = (value.lowercased() == "true")
+        case "start":
+            tmpStart = Self.isoFormatter.date(from: value)
+        case "end":
+            tmpEnd = Self.isoFormatter.date(from: value)
         case "entity":
             // <entity> as a label inside <exception> or <prefix> records is just a
             // human-readable name, not a record terminator. Only process the
@@ -157,13 +184,17 @@ class CTYParser: NSObject, XMLParserDelegate {
                     let hasMultipleLetters = upper.filter({ $0.isLetter }).count >= 3
                     let looksLikeFullCall = hasDigit && hasMultipleLetters
                     prefixRules.append(CTYPrefixRule(
-                        call: upper, adif: adif, isExact: looksLikeFullCall
+                        call: upper, adif: adif, isExact: looksLikeFullCall,
+                        startDate: tmpStart, endDate: tmpEnd
                     ))
                 }
             }
         case "exception":
             if let adif = tmpAdif, let call = tmpCall {
-                prefixRules.append(CTYPrefixRule(call: call.uppercased(), adif: adif, isExact: true))
+                prefixRules.append(CTYPrefixRule(
+                    call: call.uppercased(), adif: adif, isExact: true,
+                    startDate: tmpStart, endDate: tmpEnd
+                ))
             }
         case "entities": inEntities = false
         case "exceptions": inExceptions = false

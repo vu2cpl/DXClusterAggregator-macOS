@@ -19,7 +19,11 @@ class DXCCResolver {
         exactMap.removeAll()
         prefixMap.removeAll()
 
-        for rule in rules {
+        // Only load rules currently active "now". Historical / deleted entity
+        // rules (e.g. KARELO-FINN REP ended 1960) must not contaminate today's
+        // lookups.
+        let now = Date()
+        for rule in rules where rule.isActive(at: now) {
             if rule.isExact {
                 exactMap[rule.call] = rule.adif
             } else {
