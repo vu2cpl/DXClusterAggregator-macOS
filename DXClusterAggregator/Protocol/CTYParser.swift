@@ -51,16 +51,35 @@ class CTYParser: NSObject, XMLParserDelegate {
 
     func parser(_ parser: XMLParser, didStartElement elementName: String,
                 namespaceURI: String?, qualifiedName qName: String?,
-                attributes attributeDict: [String : String] = [:]) {
+                attributes attributeDict: [String : String]) {
         currentElement = elementName
         currentPath.append(elementName)
         buffer = ""
 
-        switch elementName.lowercased() {
+        let lower = elementName.lowercased()
+
+        // Top-level section flags
+        switch lower {
         case "entities": inEntities = true
         case "exceptions": inExceptions = true
         case "prefixes": inPrefixes = true
-        case "entity", "exception", "prefix":
+        default: break
+        }
+
+        // Reset temps ONLY when starting a top-level record. Several tag names
+        // (entity, prefix) appear both as records and as nested labels inside
+        // other records, so we must check the parent element to disambiguate.
+        // currentPath at this point: [..., parent, current]
+        let parent = currentPath.count >= 2
+            ? currentPath[currentPath.count - 2].lowercased()
+            : ""
+
+        let isTopLevelRecord =
+            (lower == "entity"    && parent == "entities") ||
+            (lower == "exception" && parent == "exceptions") ||
+            (lower == "prefix"    && parent == "prefixes")
+
+        if isTopLevelRecord {
             tmpAdif = nil
             tmpName = nil
             tmpPrefix = nil
@@ -68,7 +87,6 @@ class CTYParser: NSObject, XMLParserDelegate {
             tmpContinent = nil
             tmpCall = nil
             tmpDeleted = false
-        default: break
         }
     }
 
@@ -81,18 +99,24 @@ class CTYParser: NSObject, XMLParserDelegate {
         let value = buffer.trimmingCharacters(in: .whitespacesAndNewlines)
         let lower = elementName.lowercased()
 
+        // Determine parent for context-sensitive handling
+        let parent = currentPath.count >= 2
+            ? currentPath[currentPath.count - 2].lowercased()
+            : ""
+
         switch lower {
         case "adif":
             tmpAdif = Int(value)
         case "name":
             tmpName = value
         case "prefix":
-            // Inside an <entity>, this is the canonical prefix
-            // Inside a <prefix> record, this is the prefix pattern (call field)
-            if currentPath.count >= 2 && currentPath[currentPath.count - 2].lowercased() == "entity" {
+            // <prefix> appears in two contexts:
+            //   - Inside <entity>: canonical prefix string for that entity
+            //   - Inside <prefixes> as a prefix-record element terminator
+            if parent == "entity" {
                 tmpPrefix = value
-            } else if inPrefixes && currentPath.count >= 2 && currentPath[currentPath.count - 2].lowercased() == "prefixes" {
-                // End of <prefix> record
+            } else if parent == "prefixes" {
+                // End of a top-level <prefix> record
                 if let adif = tmpAdif, let call = tmpCall {
                     prefixRules.append(CTYPrefixRule(call: call.uppercased(), adif: adif, isExact: false))
                 }
@@ -106,6 +130,10 @@ class CTYParser: NSObject, XMLParserDelegate {
         case "deleted":
             tmpDeleted = (value.lowercased() == "true")
         case "entity":
+            // <entity> as a label inside <exception> or <prefix> records is just a
+            // human-readable name, not a record terminator. Only process the
+            // top-level entity records under <entities>.
+            guard parent == "entities" else { break }
             if let adif = tmpAdif, let name = tmpName {
                 let entity = DXCCEntity(
                     adif: adif,
