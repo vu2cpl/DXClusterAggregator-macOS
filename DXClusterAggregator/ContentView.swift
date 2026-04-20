@@ -595,6 +595,9 @@ struct ContentView: View {
                 .help("Show only spots matching an enabled ClubLog alert (new DXCC/slot/band/mode)")
             Toggle("Hide Duplicates", isOn: $settings.hideDuplicates)
                 .help("Collapse repeat spots of the same call/band/mode within a 60-second window")
+
+            sourceFilterMenu
+
             Toggle("Hide on Start", isOn: $settings.minimizeOnStart)
                 .help("When monitoring starts, hide the main window. Use the menu bar antenna icon to show it again.")
 
@@ -915,6 +918,53 @@ struct ContentView: View {
             .replacingOccurrences(of: ">", with: "&gt;")
     }
 
+    /// All known source names from current settings (UDP + DX cluster).
+    private var allSourceNames: [String] {
+        let udp = settings.udpSources.map { $0.name }
+        let dxc = settings.dxClusterSources.map { $0.name }
+        return Array(Set(udp + dxc)).sorted()
+    }
+
+    private var sourceFilterMenu: some View {
+        let selected = settings.selectedSources
+        let label: String
+        if selected.isEmpty {
+            label = "Sources: All"
+        } else if selected.count == 1 {
+            label = "Source: \(selected.first!)"
+        } else {
+            label = "Sources: \(selected.count)"
+        }
+
+        return Menu {
+            Button(action: { settings.selectedSources = [] }) {
+                Label("All Sources", systemImage: selected.isEmpty ? "checkmark" : "")
+            }
+            Divider()
+            ForEach(allSourceNames, id: \.self) { name in
+                Button(action: {
+                    if settings.selectedSources.contains(name) {
+                        settings.selectedSources.remove(name)
+                    } else {
+                        settings.selectedSources.insert(name)
+                    }
+                }) {
+                    Label(name, systemImage: selected.contains(name) ? "checkmark" : "")
+                }
+            }
+            if !allSourceNames.isEmpty {
+                Divider()
+                Button("Clear filter") { settings.selectedSources = [] }
+                    .disabled(selected.isEmpty)
+            }
+        } label: {
+            Label(label, systemImage: "line.3.horizontal.decrease.circle")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("Filter the spots table by source. Multi-select supported.")
+    }
+
     private func isNewAlert(_ level: AlertLevel) -> Bool {
         switch level {
         case .newDXCC, .newSlot, .newBand, .newMode: return true
@@ -929,7 +979,13 @@ struct ContentView: View {
     }
 
     private var displayedSpots: [SpotMessage] {
-        let filtered = spots.filter { shouldShow($0) }
+        var filtered = spots.filter { shouldShow($0) }
+
+        // Source filter (empty = all sources)
+        if !settings.selectedSources.isEmpty {
+            filtered = filtered.filter { settings.selectedSources.contains($0.sourceName) }
+        }
+
         guard settings.hideDuplicates else { return filtered }
 
         // Collapse duplicates: same CALL-BAND-MODE within 60s of each other.

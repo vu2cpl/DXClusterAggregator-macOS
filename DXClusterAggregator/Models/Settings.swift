@@ -51,11 +51,22 @@ class AppSettings: ObservableObject {
         didSet { saveCodable(notifications, key: "notificationConfig") }
     }
 
+    /// Source-name filter for the spots table.
+    /// Empty set = show all sources.
+    @Published var selectedSources: Set<String> {
+        didSet { saveCodable(Array(selectedSources), key: "selectedSources") }
+    }
+
     init() {
         self.udpSources = Self.loadCodable(key: "udpSources") ?? UDPSource.defaultSources
         self.dxClusterSources = Self.loadCodable(key: "dxClusterSources") ?? []
         self.clubLog = Self.loadCodable(key: "clubLogConfig") ?? ClubLogConfig()
         self.notifications = Self.loadCodable(key: "notificationConfig") ?? NotificationConfig()
+        if let arr: [String] = Self.loadCodable(key: "selectedSources") {
+            self.selectedSources = Set(arr)
+        } else {
+            self.selectedSources = []
+        }
     }
 
     var cooldownMinutesString: Binding<String> {
