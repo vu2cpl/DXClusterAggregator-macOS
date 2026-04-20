@@ -588,7 +588,8 @@ struct ContentView: View {
             Toggle("CQ Only", isOn: $settings.cqOnly)
             Toggle("New Only", isOn: $settings.newOnly)
                 .help("Show only spots matching an enabled ClubLog alert (new DXCC/slot/band/mode)")
-            Toggle("Minimize on Start", isOn: $settings.minimizeOnStart)
+            Toggle("Hide on Start", isOn: $settings.minimizeOnStart)
+                .help("When monitoring starts, hide the main window. Use the menu bar antenna icon to show it again.")
 
             Spacer()
 
@@ -771,6 +772,13 @@ struct ContentView: View {
         configureBroadcaster()
 
         isMonitoring = true
+
+        // Hide window if user wants menu-bar-only mode while monitoring.
+        if settings.minimizeOnStart {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                WindowManager.hideMainWindow()
+            }
+        }
     }
 
     private func stopMonitoring() {
