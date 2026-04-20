@@ -654,7 +654,8 @@ struct ContentView: View {
                 let visible = displayedSpots
                 List(visible) { spot in
                     HStack(spacing: 8) {
-                        Text(alertIcon(spot.alertLevel)).frame(width: 20, alignment: .leading)
+                        Text(spot.isBeacon ? "🔔" : alertIcon(spot.alertLevel))
+                            .frame(width: 20, alignment: .leading)
                         Text(spot.timeString).frame(width: 55, alignment: .leading)
                         Text(spot.sourceName).frame(width: 70, alignment: .leading)
                             .foregroundColor(.secondary)
