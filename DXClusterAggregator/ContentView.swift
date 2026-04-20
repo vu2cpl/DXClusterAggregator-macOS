@@ -837,7 +837,9 @@ struct ContentView: View {
 
         // CQ filter and New filter apply to rebroadcast (gated live by current toggle state).
         if shouldShow(spot) && !isRecentlyBroadcast(spot) {
-            let clusterMessage = ClusterFormatter.format(spot: spot, spotter: settings.callsign)
+            // Spotter = source name (e.g. "WSJT-X" or "JTDX") so the local
+            // telnet client can see exactly which radio/decoder reported it.
+            let clusterMessage = ClusterFormatter.format(spot: spot, spotter: spot.sourceName)
             tcpServer.broadcast(clusterMessage)
             udpBroadcaster.broadcast(clusterMessage)
             markBroadcast(spot)
@@ -994,10 +996,9 @@ struct ContentView: View {
         maybeNotify(spot)
 
         if shouldShow(spot) && !isRecentlyBroadcast(spot) {
-            // Always brand rebroadcast spots with the user's callsign so local
-            // telnet clients see them as coming from THIS aggregator, not as a
-            // raw relay from the upstream cluster (e.g. N2WQ).
-            let clusterMessage = ClusterFormatter.format(spot: spot, spotter: settings.callsign)
+            // Spotter = the cluster source name (e.g. "N2WQ") so local telnet
+            // clients can identify which upstream cluster the spot came from.
+            let clusterMessage = ClusterFormatter.format(spot: spot, spotter: spot.sourceName)
             tcpServer.broadcast(clusterMessage)
             udpBroadcaster.broadcast(clusterMessage)
             markBroadcast(spot)
