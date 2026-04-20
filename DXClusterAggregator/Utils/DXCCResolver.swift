@@ -33,23 +33,36 @@ class DXCCResolver {
         sortedPrefixes = prefixMap.keys.sorted { $0.count > $1.count }
     }
 
-    /// Resolve a callsign to a DXCC entity ID. Returns nil if no data loaded or no match.
+    /// Resolve a callsign to a DXCC entity ID.
+    /// Returns nil if no data is loaded, there is no match, or the call is
+    /// flagged by ClubLog as a non-DX operation (beacons, satellites, Internet
+    /// repeaters — those records have adif=0).
     func resolve(_ callsign: String) -> Int? {
         let call = callsign.uppercased()
-
-        // Strip slash portables (e.g. "K1JT/P" -> "K1JT", "W1AW/4" -> "W1AW"
-        // but for "VP8/K1JT", use "VP8" as it's the DX part)
         let cleanCall = normalizeCall(call)
 
-        // 1) exact match wins
-        if let adif = exactMap[cleanCall] { return adif }
+        // 1) exact match wins (includes ClubLog exception overrides)
+        if let adif = exactMap[cleanCall] {
+            return adif > 0 ? adif : nil
+        }
 
         // 2) longest prefix match
         for prefix in sortedPrefixes where cleanCall.hasPrefix(prefix) {
-            if let adif = prefixMap[prefix] { return adif }
+            if let adif = prefixMap[prefix] {
+                return adif > 0 ? adif : nil
+            }
         }
 
         return nil
+    }
+
+    /// True if the callsign is flagged by ClubLog as a non-DX operation
+    /// (beacons like OH2B / 4X6TU, ISS / satellites, Internet gateways).
+    /// Used to skip alert classification and highlighting for these spots.
+    func isNonDXOperation(_ callsign: String) -> Bool {
+        let cleanCall = normalizeCall(callsign.uppercased())
+        if let adif = exactMap[cleanCall], adif == 0 { return true }
+        return false
     }
 
     /// Look up entity info by ADIF/DXCC id.

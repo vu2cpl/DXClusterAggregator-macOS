@@ -24,9 +24,16 @@ struct AlertClassifier {
             return Classification(level: .none, dxccId: nil, dxccName: nil, band: nil)
         }
 
+        let band = BandResolver.band(fromMHz: frequencyMHz)
+
+        // Beacons / satellites / Internet gateways: ClubLog marks these with
+        // adif=0. Show them in the table as "Beacon" but never trigger alerts.
+        if resolver.isNonDXOperation(call) {
+            return Classification(level: .none, dxccId: nil, dxccName: "Beacon", band: band)
+        }
+
         let dxccId = resolver.resolve(call)
         let dxccName = dxccId.flatMap { resolver.entity(for: $0)?.name }
-        let band = BandResolver.band(fromMHz: frequencyMHz)
         let normalizedMode = mode.uppercased().isEmpty ? "FT8" : mode.uppercased()
 
         // Without DXCC or band we can't classify
