@@ -13,24 +13,38 @@ def create_menubar_icon(size=44):
 
     BLACK = (0, 0, 0, 255)
 
-    # Rounded rectangle outline (antenna badge feel)
-    pad = max(1, size // 22)
-    draw.rounded_rectangle(
-        [pad, pad, size - pad - 1, size - pad - 1],
-        radius=max(2, size // 8),
-        outline=BLACK,
-        width=max(2, size // 20)
-    )
-
-    # "FT8" text centered
-    try:
-        # Use a bold font at roughly 50% of icon height
-        font_size = int(size * 0.55)
-        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
-    except Exception:
+    # Clean, bold FT8 text filling most of the icon width.
+    # Try a bold font first; fall back progressively.
+    font = None
+    font_size = int(size * 0.80)  # tall so the text dominates
+    for path in [
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/System/Library/Fonts/HelveticaNeue.ttc",
+        "/Library/Fonts/Arial Bold.ttf",
+    ]:
+        try:
+            font = ImageFont.truetype(path, font_size, index=1)  # index 1 = bold variant
+            break
+        except Exception:
+            try:
+                font = ImageFont.truetype(path, font_size)
+                break
+            except Exception:
+                continue
+    if font is None:
         font = ImageFont.load_default()
 
     text = "FT8"
+    # Shrink until text fits within icon width with ~5% padding
+    max_width = int(size * 0.95)
+    while font_size > 6:
+        bbox = draw.textbbox((0, 0), text, font=font)
+        tw = bbox[2] - bbox[0]
+        if tw <= max_width:
+            break
+        font_size -= 1
+        font = ImageFont.truetype(font.path if hasattr(font, "path") else "/System/Library/Fonts/Helvetica.ttc", font_size)
+
     bbox = draw.textbbox((0, 0), text, font=font)
     tw = bbox[2] - bbox[0]
     th = bbox[3] - bbox[1]
