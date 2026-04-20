@@ -17,6 +17,11 @@ struct ContentView: View {
     // Notification cooldown tracker: callsign -> last-notified Date
     @State private var notificationCooldown: [String: Date] = [:]
 
+    // Dedupe: "CALL-BAND-MODE" -> last broadcast Date (prevents same spot going out
+    // multiple times when received from several upstream sources within seconds).
+    @State private var rebroadcastCache: [String: Date] = [:]
+    private let rebroadcastDedupeWindow: TimeInterval = 60  // seconds
+
     var body: some View {
         VStack(spacing: 12) {
             headerSection
@@ -829,10 +834,11 @@ struct ContentView: View {
         maybeNotify(spot)
 
         // CQ filter and New filter apply to rebroadcast (gated live by current toggle state).
-        if shouldShow(spot) {
+        if shouldShow(spot) && !isRecentlyBroadcast(spot) {
             let clusterMessage = ClusterFormatter.format(spot: spot, spotter: settings.callsign)
             tcpServer.broadcast(clusterMessage)
             udpBroadcaster.broadcast(clusterMessage)
+            markBroadcast(spot)
         }
     }
 
@@ -961,11 +967,43 @@ struct ContentView: View {
         spots.append(spot)
         maybeNotify(spot)
 
-        if shouldShow(spot) {
-            let clusterMessage = ClusterFormatter.format(spot: spot, spotter: clusterSpot.spotter)
+        if shouldShow(spot) && !isRecentlyBroadcast(spot) {
+            // Always brand rebroadcast spots with the user's callsign so local
+            // telnet clients see them as coming from THIS aggregator, not as a
+            // raw relay from the upstream cluster (e.g. N2WQ).
+            let clusterMessage = ClusterFormatter.format(spot: spot, spotter: settings.callsign)
             tcpServer.broadcast(clusterMessage)
             udpBroadcaster.broadcast(clusterMessage)
+            markBroadcast(spot)
         }
+    }
+
+    /// Dedupe key: callsign + band + mode (and rough time bucket is implicit in window).
+    private func broadcastKey(for spot: SpotMessage) -> String? {
+        guard let call = spot.dxCallsign?.uppercased() else { return nil }
+        let band = spot.bandName ?? ""
+        let mode = spot.mode.uppercased()
+        return "\(call)-\(band)-\(mode)"
+    }
+
+    private func isRecentlyBroadcast(_ spot: SpotMessage) -> Bool {
+        guard let key = broadcastKey(for: spot) else { return false }
+        let now = Date()
+        // Opportunistic cleanup of old entries
+        if rebroadcastCache.count > 2000 {
+            let cutoff = now.addingTimeInterval(-rebroadcastDedupeWindow)
+            rebroadcastCache = rebroadcastCache.filter { $0.value >= cutoff }
+        }
+        if let last = rebroadcastCache[key],
+           now.timeIntervalSince(last) < rebroadcastDedupeWindow {
+            return true
+        }
+        return false
+    }
+
+    private func markBroadcast(_ spot: SpotMessage) {
+        guard let key = broadcastKey(for: spot) else { return }
+        rebroadcastCache[key] = Date()
     }
 
     @MainActor
