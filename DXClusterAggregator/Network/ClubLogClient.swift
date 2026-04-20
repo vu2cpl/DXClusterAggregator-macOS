@@ -229,12 +229,12 @@ class ClubLogClient: ObservableObject {
     // MARK: - gzip decompression using Apple Compression framework
 
     private func gunzip(_ data: Data) throws -> Data {
-        // Skip gzip header to get raw deflate stream
-        guard data.count > 10 else {
-            throw NSError(domain: "gunzip", code: -1, userInfo: [NSLocalizedDescriptionKey: "Data too short"])
+        // Strip the gzip header to get the raw deflate stream
+        guard data.count > 18 else {
+            throw NSError(domain: "gunzip", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "Data too short"])
         }
 
-        // gzip header: 10 bytes; may include FNAME etc. based on flags byte[3]
         var offset = 10
         let flags = data[3]
         if (flags & 0x08) != 0 {  // FNAME
@@ -247,31 +247,60 @@ class ClubLogClient: ObservableObject {
         }
         if (flags & 0x02) != 0 { offset += 2 } // FHCRC
 
-        // Trim trailing 8 bytes (CRC32 + ISIZE)
+        // Trailing 8 bytes are CRC32 + ISIZE
         guard data.count > offset + 8 else {
-            throw NSError(domain: "gunzip", code: -2, userInfo: [NSLocalizedDescriptionKey: "Malformed gzip"])
+            throw NSError(domain: "gunzip", code: -2,
+                          userInfo: [NSLocalizedDescriptionKey: "Malformed gzip"])
         }
         let deflateData = data.subdata(in: offset..<(data.count - 8))
 
-        let bufferSize = max(deflateData.count * 6, 1_000_000)
-        let destination = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-        defer { destination.deallocate() }
+        // Use streaming decode so we don't have to guess the output size up-front.
+        let streamPtr = UnsafeMutablePointer<compression_stream>.allocate(capacity: 1)
+        defer { streamPtr.deallocate() }
 
-        let decompressedSize = deflateData.withUnsafeBytes { (rawBuffer: UnsafeRawBufferPointer) -> Int in
-            let bound = rawBuffer.bindMemory(to: UInt8.self)
-            return compression_decode_buffer(
-                destination, bufferSize,
-                bound.baseAddress!, deflateData.count,
-                nil, COMPRESSION_ZLIB
-            )
-        }
-
-        guard decompressedSize > 0 else {
+        var status = compression_stream_init(streamPtr, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB)
+        guard status != COMPRESSION_STATUS_ERROR else {
             throw NSError(domain: "gunzip", code: -3,
-                          userInfo: [NSLocalizedDescriptionKey: "Decompression failed"])
+                          userInfo: [NSLocalizedDescriptionKey: "stream init failed"])
+        }
+        defer { compression_stream_destroy(streamPtr) }
+
+        let chunkSize = 256 * 1024
+        let destBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: chunkSize)
+        defer { destBuffer.deallocate() }
+
+        var output = Data()
+
+        try deflateData.withUnsafeBytes { (rawBuf: UnsafeRawBufferPointer) -> Void in
+            guard let srcBase = rawBuf.bindMemory(to: UInt8.self).baseAddress else { return }
+            // Initial source pointer setup
+            streamPtr.pointee.src_ptr = srcBase
+            streamPtr.pointee.src_size = deflateData.count
+            streamPtr.pointee.dst_ptr = destBuffer
+            streamPtr.pointee.dst_size = chunkSize
+
+            while true {
+                status = compression_stream_process(streamPtr, Int32(COMPRESSION_STREAM_FINALIZE.rawValue))
+                switch status {
+                case COMPRESSION_STATUS_OK, COMPRESSION_STATUS_END:
+                    let produced = chunkSize - streamPtr.pointee.dst_size
+                    if produced > 0 {
+                        output.append(destBuffer, count: produced)
+                    }
+                    if status == COMPRESSION_STATUS_END { return }
+                    // Reset destination buffer for next iteration
+                    streamPtr.pointee.dst_ptr = destBuffer
+                    streamPtr.pointee.dst_size = chunkSize
+                case COMPRESSION_STATUS_ERROR:
+                    throw NSError(domain: "gunzip", code: -4,
+                                  userInfo: [NSLocalizedDescriptionKey: "decode error"])
+                default:
+                    return
+                }
+            }
         }
 
-        return Data(bytes: destination, count: decompressedSize)
+        return output
     }
 
     // MARK: - Helpers

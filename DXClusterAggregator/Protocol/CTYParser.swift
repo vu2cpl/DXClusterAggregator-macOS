@@ -36,6 +36,7 @@ class CTYParser: NSObject, XMLParserDelegate {
     private var tmpCQZ: Int?
     private var tmpContinent: String?
     private var tmpCall: String?
+    private var tmpDeleted: Bool = false
     private var inExceptions = false
     private var inPrefixes = false
     private var inEntities = false
@@ -66,6 +67,7 @@ class CTYParser: NSObject, XMLParserDelegate {
             tmpCQZ = nil
             tmpContinent = nil
             tmpCall = nil
+            tmpDeleted = false
         default: break
         }
     }
@@ -101,6 +103,8 @@ class CTYParser: NSObject, XMLParserDelegate {
             tmpCQZ = Int(value)
         case "cont":
             tmpContinent = value
+        case "deleted":
+            tmpDeleted = (value.lowercased() == "true")
         case "entity":
             if let adif = tmpAdif, let name = tmpName {
                 let entity = DXCCEntity(
@@ -111,6 +115,23 @@ class CTYParser: NSObject, XMLParserDelegate {
                     continent: tmpContinent ?? ""
                 )
                 entities[adif] = entity
+
+                // Also register the entity's canonical prefix as a lookup rule
+                // so callsigns with that prefix resolve to this DXCC. Skip
+                // deleted entities - they're historical and would shadow
+                // active ones (e.g., "EU" vs "EM" for Ukraine).
+                if !tmpDeleted, let prefix = tmpPrefix, !prefix.isEmpty {
+                    // Treat the entity prefix as exact-match if it looks like a
+                    // full callsign (contains a digit), otherwise as a prefix rule.
+                    // 4U1UN, 1A0KM etc. are entire callsigns; VE, K, JA are prefixes.
+                    let upper = prefix.uppercased()
+                    let hasDigit = upper.contains(where: { $0.isNumber })
+                    let hasMultipleLetters = upper.filter({ $0.isLetter }).count >= 3
+                    let looksLikeFullCall = hasDigit && hasMultipleLetters
+                    prefixRules.append(CTYPrefixRule(
+                        call: upper, adif: adif, isExact: looksLikeFullCall
+                    ))
+                }
             }
         case "exception":
             if let adif = tmpAdif, let call = tmpCall {
