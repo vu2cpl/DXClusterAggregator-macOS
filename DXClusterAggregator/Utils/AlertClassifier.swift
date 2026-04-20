@@ -59,9 +59,11 @@ struct AlertClassifier {
 
         let slot = "\(band)-\(mode)"
         if !slots.contains(slot) {
-            if !bands.contains(band) && !modes.contains(mode) {
-                return .newSlot
-            }
+            // Priority order:
+            //   newBand: this band has never been worked for the entity
+            //   newMode: this mode has never been worked for the entity
+            //   newSlot: both band and mode are individually worked, but not in combination
+            //            (the genuine 5BDXCC / 9BDXCC / triple-play scenario)
             if !bands.contains(band) {
                 return .newBand
             }
