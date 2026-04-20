@@ -93,8 +93,10 @@ class DXCCResolver {
         let a = parts[0]
         let b = parts[1]
 
-        // Simple portable suffixes
-        let portableSuffixes: Set<String> = ["P", "M", "MM", "AM", "QRP", "A"]
+        // Simple portable suffixes (including /B = beacon, /LH = lighthouse, etc.)
+        let portableSuffixes: Set<String> = [
+            "P", "M", "MM", "AM", "QRP", "A", "B", "LH", "BCN"
+        ]
         if portableSuffixes.contains(b) { return a }
         if portableSuffixes.contains(a) { return b }
 

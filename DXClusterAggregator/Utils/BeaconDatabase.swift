@@ -14,7 +14,6 @@ struct BeaconDatabase {
     /// Match is on the bare callsign with any /portable suffix removed.
     static func lookup(_ call: String) -> BeaconInfo? {
         let upper = call.uppercased()
-        // Strip /P, /M, /MM, etc.
         let bare: String
         if let slash = upper.firstIndex(of: "/") {
             bare = String(upper[..<slash])
@@ -24,12 +23,28 @@ struct BeaconDatabase {
         return beacons[bare]
     }
 
+    /// True if the callsign uses a /B or /BCN suffix — a common convention
+    /// for beacon operations in Europe (e.g. IT9ATQ/B) even if the specific
+    /// call isn't in our explicit database.
+    static func hasBeaconSuffix(_ call: String) -> Bool {
+        let upper = call.uppercased()
+        guard let slash = upper.firstIndex(of: "/") else { return false }
+        let suffix = String(upper[upper.index(after: slash)...])
+        return suffix == "B" || suffix == "BCN"
+    }
+
     static func displayName(for call: String) -> String? {
-        guard let info = lookup(call) else { return nil }
-        if let net = info.network {
-            return "\(net) Beacon — \(info.location)"
+        if let info = lookup(call) {
+            if let net = info.network {
+                return "\(net) Beacon — \(info.location)"
+            }
+            return "Beacon — \(info.location)"
         }
-        return "Beacon — \(info.location)"
+        if hasBeaconSuffix(call) {
+            // Not in our explicit list but the /B suffix is a strong hint.
+            return "Beacon (/B suffix)"
+        }
+        return nil
     }
 
     /// The 18 NCDXF / IBP beacons + a few other commonly-spotted beacons.
