@@ -12,6 +12,35 @@ A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JT
 - **CQ-Only Filter** — Filter to show only CQ calls
 - **Persistent Settings** — All configuration saved automatically
 
+## Requirements
+
+### System
+
+| | |
+|---|---|
+| **Operating System** | macOS 14.0 (Sonoma) or later — Sonoma / Sequoia / Tahoe |
+| **Architecture** | Apple Silicon (M1–M4) **or** Intel (shipped as a universal binary) |
+| **RAM** | ~50–100 MB runtime |
+| **Disk** | < 5 MB for the app; ~15 MB for ClubLog cache (log + cty.xml + matrix) |
+| **Network** | Local LAN for WSJT-X/JTDX UDP; Internet for DX Cluster telnet + ClubLog API |
+
+### Software (optional integrations)
+
+The app runs standalone — all these are optional depending on which features you use:
+
+- **WSJT-X** and/or **JTDX** — recent version with UDP broadcast enabled, pointing at the aggregator's listen port (default `2237`)
+- **ClubLog account** with an **App Password** (Settings → App Passwords) and a **Developer API Key** ([request here](https://clublog.org/requestapikey.php)) — only needed for the alert/highlight features
+- **Telegram bot** (via @BotFather) + your Chat ID — only if you want Telegram push alerts
+- **Logging software** that connects to a telnet DX cluster (Logger32, N1MM+, Log4OM, DXKeeper, etc.) — point it at `127.0.0.1:7550` (or whatever port you configure)
+
+### Build-from-source Requirements
+
+Only needed if you're compiling the app yourself; end users don't need these.
+
+- **Xcode Command Line Tools** — `xcode-select --install` (provides the Swift 5.9+ compiler)
+- **macOS 15 SDK** — usually already installed alongside Xcode CLT. If you're on macOS 26 (Tahoe), you must pin the build to SDK 15 (`SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk`); otherwise the binary will refuse to launch on macOS 15 or earlier.
+- **Python 3** with `Pillow` and `reportlab` — only required if you want to regenerate the app icon or PDF user manual (`generate_icon.py`, `generate_menubar_icon.py`, `generate_manual.py`).
+
 ## Installation
 
 ### Option 1: Download Pre-built App
@@ -168,11 +197,6 @@ cp -r DXClusterAggregator.app /Applications/
 | WSJT-X UDP Port | 2237 |
 | TCP Cluster Port | 7550 |
 | Broadcast 1 | 127.0.0.1:2236 |
-
-## System Requirements
-
-- macOS 14.0 (Sonoma) or later
-- Apple Silicon or Intel Mac
 
 ## Documentation
 
