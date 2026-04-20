@@ -41,11 +41,11 @@ def create_menubar_icon(size=44):
     BLACK = (0, 0, 0, 255)
     text = "DX"
 
-    font_size = int(size * 0.82)  # tall so text dominates
+    # Keep the glyphs comfortably inside the icon: ~65% height, ~80% max width
+    font_size = int(size * 0.70)
     font = find_bold_font(font_size)
 
-    # Shrink until text fits
-    max_width = int(size * 0.95)
+    max_width = int(size * 0.80)
     while font_size > 6:
         bbox = draw.textbbox((0, 0), text, font=font)
         if bbox[2] - bbox[0] <= max_width:
@@ -59,14 +59,11 @@ def create_menubar_icon(size=44):
     text_x = (size - tw) // 2 - bbox[0]
     text_y = (size - th) // 2 - bbox[1]
 
-    # Extra weight: draw the text multiple times with 1px offsets (faux-bold / thick stroke)
-    stroke = max(1, size // 22)  # scale stroke with size
-    offsets = []
-    for dx in range(-stroke, stroke + 1):
-        for dy in range(-stroke, stroke + 1):
-            offsets.append((dx, dy))
-    for dx, dy in offsets:
-        draw.text((text_x + dx, text_y + dy), text, fill=BLACK, font=font)
+    # Use Pillow's built-in stroke_width for clean, even boldness that does
+    # not fill in counters at small sizes. Small stroke only at larger renders.
+    stroke = 1 if size >= 40 else 0
+    draw.text((text_x, text_y), text, fill=BLACK, font=font,
+              stroke_width=stroke, stroke_fill=BLACK)
 
     return img
 
