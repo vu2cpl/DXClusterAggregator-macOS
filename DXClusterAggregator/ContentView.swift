@@ -871,6 +871,11 @@ struct ContentView: View {
         // Quick exit if nothing is enabled
         guard cfg.telegramEnabled || cfg.systemEnabled else { return }
 
+        // Respect the live display filters: Sources, Bands, New Only. If the
+        // user has hidden this source/band from the table, don't push a
+        // notification for it either.
+        guard shouldShow(spot) else { return }
+
         // Match on user-selected notification levels (separate from highlight toggles)
         let notify: Bool
         switch spot.alertLevel {
