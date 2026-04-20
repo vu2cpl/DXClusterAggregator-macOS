@@ -230,7 +230,7 @@ def build_cover():
     elements.append(Spacer(1, 8 * mm))
     elements.append(Paragraph("User Manual", styles['CoverSubtitle']))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(Paragraph("Version 1.4.0", styles['CoverVersion']))
+    elements.append(Paragraph("Version 1.5.0", styles['CoverVersion']))
     elements.append(Spacer(1, 30 * mm))
 
     elements.append(Paragraph("Aggregate FT8/FT4 spots from multiple WSJT-X/JTDX instances", styles['Credits']))
@@ -288,9 +288,14 @@ def build_toc():
         ("", "9.3  Band Filter for Import"),
         ("", "9.4  Include Unconfirmed"),
         ("", "9.5  Alert Types and Highlighting"),
-        ("10.", "Connecting Logging Software"),
-        ("11.", "Troubleshooting"),
-        ("12.", "Credits & Acknowledgements"),
+        ("10.", "Notifications (Telegram & macOS)"),
+        ("", "10.1  Telegram Setup"),
+        ("", "10.2  macOS Notifications"),
+        ("", "10.3  Cooldown"),
+        ("", "10.4  Notify-On Selection"),
+        ("11.", "Connecting Logging Software"),
+        ("12.", "Troubleshooting"),
+        ("13.", "Credits & Acknowledgements"),
     ]
 
     for num, title in toc_items:
@@ -999,7 +1004,67 @@ def build_content():
     ))
 
     elements.append(PageBreak())
-    elements.append(Paragraph("10. Connecting Logging Software", styles['ChapterTitle']))
+    elements.append(PageBreak())
+    elements.append(Paragraph("10. Notifications (Telegram & macOS)", styles['ChapterTitle']))
+    elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
+
+    elements.append(Paragraph(
+        "FT8ClusterAggregator can push alerts to your Telegram chat and/or to the macOS "
+        "Notification Center whenever a spot matching your selected alert types arrives. "
+        "Alerts are throttled per callsign by a configurable cooldown to prevent spam.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("10.1  Telegram Setup", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> Create a Telegram bot via @BotFather and copy the <b>Bot Token</b>",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> Send /start to your bot, then look up your <b>Chat ID</b> via @userinfobot or by visiting https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> In FT8ClusterAggregator, open the <b>Notifications</b> section and enable <b>Telegram</b>",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> Paste the Bot Token and Chat ID, then click <b>Send Test</b>",
+        styles['BulletItem']
+    ))
+
+    elements.append(Paragraph("10.2  macOS Notifications", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "Enable the <b>macOS Notifications</b> toggle. The first time you enable it, macOS will "
+        "prompt you to allow notifications from FT8ClusterAggregator. Click <b>Allow</b>. Banners "
+        "will then appear in the corner of your screen for each matching spot.",
+        styles['Body']
+    ))
+    elements.append(Paragraph(
+        "If you accidentally denied permission, open System Settings > Notifications, find "
+        "FT8ClusterAggregator in the list, and re-enable Allow Notifications.",
+        styles['Note']
+    ))
+
+    elements.append(Paragraph("10.3  Cooldown", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "Set the <b>Cooldown</b> to a value between 5 and 60 minutes (default 15). Within this "
+        "window, repeat spots of the same callsign do not trigger another notification. This "
+        "prevents getting flooded by FT8 stations that decode every 15 seconds.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("10.4  Notify-On Selection", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "Use the <b>Notify on</b> checkboxes to choose which alert levels should trigger a "
+        "notification - independent of the table-highlight toggles in the ClubLog section. "
+        "For example, you might highlight all four levels visually but only get notifications "
+        "for new DXCC and new slot.",
+        styles['Body']
+    ))
+
+    elements.append(PageBreak())
+    elements.append(Paragraph("11. Connecting Logging Software", styles['ChapterTitle']))
     elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
 
     elements.append(Paragraph(
@@ -1050,7 +1115,7 @@ def build_content():
 
     # Chapter 11: Troubleshooting
     elements.append(PageBreak())
-    elements.append(Paragraph("11. Troubleshooting", styles['ChapterTitle']))
+    elements.append(Paragraph("12. Troubleshooting", styles['ChapterTitle']))
     elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
 
     trouble_data = [
@@ -1089,7 +1154,7 @@ def build_content():
 
     # Chapter 11: Credits
     elements.append(PageBreak())
-    elements.append(Paragraph("12. Credits & Acknowledgements", styles['ChapterTitle']))
+    elements.append(Paragraph("13. Credits & Acknowledgements", styles['ChapterTitle']))
     elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
 
     elements.append(Spacer(1, 10 * mm))

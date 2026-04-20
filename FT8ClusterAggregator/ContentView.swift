@@ -14,6 +14,9 @@ struct ContentView: View {
     // Collapsible state for the configuration sections (settings panel)
     @AppStorage("showSettings") private var showSettings: Bool = true
 
+    // Notification cooldown tracker: callsign -> last-notified Date
+    @State private var notificationCooldown: [String: Date] = [:]
+
     var body: some View {
         VStack(spacing: 12) {
             headerSection
@@ -28,6 +31,8 @@ struct ContentView: View {
                         dxClusterSection
                         Divider()
                         clubLogSection
+                        Divider()
+                        notificationsSection
                     }
                 }
                 .frame(maxHeight: 380)
@@ -42,6 +47,9 @@ struct ContentView: View {
         .frame(minWidth: 800, minHeight: showSettings ? 800 : 500)
         .onAppear {
             clubLogClient.loadCachedData()
+            if settings.notifications.systemEnabled {
+                SystemNotifier.requestAuthorizationIfNeeded()
+            }
         }
     }
 
@@ -63,7 +71,7 @@ struct ContentView: View {
             }
             .help("Collapse the settings panel for more space")
 
-            Text("v1.4.0 (macOS)")
+            Text("v1.5.0 (macOS)")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -434,6 +442,88 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Notifications Section
+
+    private var notificationsSection: some View {
+        GroupBox("Notifications (Telegram + macOS)") {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Toggle("Telegram", isOn: $settings.notifications.telegramEnabled)
+                    Toggle("macOS Notifications", isOn: $settings.notifications.systemEnabled)
+                        .onChange(of: settings.notifications.systemEnabled) { _, enabled in
+                            if enabled { SystemNotifier.requestAuthorizationIfNeeded() }
+                        }
+
+                    Spacer()
+
+                    Text("Cooldown:")
+                        .font(.caption)
+                    TextField("15", text: settings.cooldownMinutesString)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 50)
+                    Stepper("", value: $settings.notifications.cooldownMinutes, in: 5...60)
+                        .labelsHidden()
+                    Text("min").font(.caption).foregroundColor(.secondary)
+                }
+
+                HStack {
+                    Text("Bot Token:").frame(width: 80, alignment: .trailing)
+                    SecureField("123456:ABC-DEF...", text: $settings.notifications.telegramBotToken)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: .infinity)
+                        .disabled(!settings.notifications.telegramEnabled)
+                }
+
+                HStack {
+                    Text("Chat ID:").frame(width: 80, alignment: .trailing)
+                    TextField("123456789", text: $settings.notifications.telegramChatId)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 200)
+                        .disableAutocorrection(true)
+                        .disabled(!settings.notifications.telegramEnabled)
+
+                    Spacer()
+
+                    Button("Send Test") { sendTestNotification() }
+                        .disabled(!settings.notifications.telegramEnabled && !settings.notifications.systemEnabled)
+                }
+
+                HStack {
+                    Text("Notify on:").bold().font(.caption)
+                    Toggle("New DXCC", isOn: $settings.notifications.notifyNewDXCC)
+                    Toggle("New Slot", isOn: $settings.notifications.notifyNewSlot)
+                    Toggle("New Band", isOn: $settings.notifications.notifyNewBand)
+                    Toggle("New Mode", isOn: $settings.notifications.notifyNewMode)
+                    Spacer()
+                }
+                .font(.caption)
+
+                Text("Cooldown applies per callsign — within the chosen window, repeat spots of the same call do not trigger another notification.")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func sendTestNotification() {
+        let cfg = settings.notifications
+        let title = "FT8ClusterAggregator Test"
+        let body = "Notifications wired up. Cooldown \(cfg.cooldownMinutes) min."
+
+        if cfg.systemEnabled {
+            SystemNotifier.requestAuthorizationIfNeeded()
+            SystemNotifier.post(title: title, body: body)
+        }
+        if cfg.telegramEnabled {
+            TelegramNotifier.send(
+                botToken: cfg.telegramBotToken,
+                chatId: cfg.telegramChatId,
+                text: "<b>\(title)</b>\n\(body)"
+            )
+        }
+    }
+
     private var bandSelectorGrid: some View {
         let allBands = ["160M","80M","60M","40M","30M","20M","17M","15M","12M","10M","6M","4M","2M","70CM"]
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
@@ -727,12 +817,84 @@ struct ContentView: View {
         // Always store the spot; filters below apply to display + rebroadcast.
         spots.append(spot)
 
+        // Push notifications (Telegram + system) for matching alerts, with per-call cooldown
+        maybeNotify(spot)
+
         // CQ filter and New filter apply to rebroadcast (gated live by current toggle state).
         if shouldShow(spot) {
             let clusterMessage = ClusterFormatter.format(spot: spot, spotter: settings.callsign)
             tcpServer.broadcast(clusterMessage)
             udpBroadcaster.broadcast(clusterMessage)
         }
+    }
+
+    /// If the spot's alert level is one the user wants notified, push to Telegram and/or
+    /// macOS Notification Center, respecting per-callsign cooldown.
+    @MainActor
+    private func maybeNotify(_ spot: FT8SpotMessage) {
+        let cfg = settings.notifications
+
+        // Quick exit if nothing is enabled
+        guard cfg.telegramEnabled || cfg.systemEnabled else { return }
+
+        // Match on user-selected notification levels (separate from highlight toggles)
+        let notify: Bool
+        switch spot.alertLevel {
+        case .newDXCC: notify = cfg.notifyNewDXCC
+        case .newSlot: notify = cfg.notifyNewSlot
+        case .newBand: notify = cfg.notifyNewBand
+        case .newMode: notify = cfg.notifyNewMode
+        case .worked, .none: notify = false
+        }
+        guard notify else { return }
+
+        guard let call = spot.dxCallsign, !call.isEmpty else { return }
+
+        // Cooldown
+        let key = call.uppercased()
+        let now = Date()
+        let cooldown = TimeInterval(max(5, min(60, cfg.cooldownMinutes)) * 60)
+        if let last = notificationCooldown[key], now.timeIntervalSince(last) < cooldown {
+            return
+        }
+        notificationCooldown[key] = now
+
+        // Build message
+        let levelLabel: String
+        switch spot.alertLevel {
+        case .newDXCC: levelLabel = "🔴 NEW DXCC"
+        case .newSlot: levelLabel = "🟠 New Slot"
+        case .newBand: levelLabel = "🔵 New Band"
+        case .newMode: levelLabel = "🟡 New Mode"
+        default: levelLabel = "Alert"
+        }
+
+        let dxcc = spot.dxccName ?? ""
+        let band = spot.bandName ?? ""
+        let freq = String(format: "%.3f MHz", spot.frequencyMHz)
+
+        let title = "\(levelLabel): \(call)"
+        let body = "\(dxcc.isEmpty ? "" : dxcc + "  ")\(freq)  \(band)  \(spot.mode)  \(spot.snr) dB"
+
+        if cfg.systemEnabled {
+            SystemNotifier.post(title: title, body: body, identifier: "spot-\(key)-\(Int(now.timeIntervalSince1970))")
+        }
+
+        if cfg.telegramEnabled {
+            // Use HTML formatting for Telegram
+            let tgText = "<b>\(escapeHTML(title))</b>\n\(escapeHTML(body))\nSource: \(escapeHTML(spot.sourceName))"
+            TelegramNotifier.send(
+                botToken: cfg.telegramBotToken,
+                chatId: cfg.telegramChatId,
+                text: tgText
+            )
+        }
+    }
+
+    private func escapeHTML(_ s: String) -> String {
+        s.replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
     }
 
     private func isNewAlert(_ level: AlertLevel) -> Bool {
@@ -789,6 +951,7 @@ struct ContentView: View {
 
         classifySpot(&spot)
         spots.append(spot)
+        maybeNotify(spot)
 
         if shouldShow(spot) {
             let clusterMessage = ClusterFormatter.format(spot: spot, spotter: clusterSpot.spotter)

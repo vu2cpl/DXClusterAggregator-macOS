@@ -46,10 +46,25 @@ class AppSettings: ObservableObject {
         didSet { saveCodable(clubLog, key: "clubLogConfig") }
     }
 
+    @Published var notifications: NotificationConfig {
+        didSet { saveCodable(notifications, key: "notificationConfig") }
+    }
+
     init() {
         self.udpSources = Self.loadCodable(key: "udpSources") ?? UDPSource.defaultSources
         self.dxClusterSources = Self.loadCodable(key: "dxClusterSources") ?? []
         self.clubLog = Self.loadCodable(key: "clubLogConfig") ?? ClubLogConfig()
+        self.notifications = Self.loadCodable(key: "notificationConfig") ?? NotificationConfig()
+    }
+
+    var cooldownMinutesString: Binding<String> {
+        Binding<String>(
+            get: { String(self.notifications.cooldownMinutes) },
+            set: {
+                let v = Int($0) ?? self.notifications.cooldownMinutes
+                self.notifications.cooldownMinutes = max(5, min(60, v))
+            }
+        )
     }
 
     private static func loadCodable<T: Codable>(key: String) -> T? {
