@@ -34,7 +34,7 @@ def create_menubar_icon(size=44):
     if font is None:
         font = ImageFont.load_default()
 
-    text = "FT8"
+    text = "DX"
     # Shrink until text fits within icon width with ~5% padding
     max_width = int(size * 0.95)
     while font_size > 6:
