@@ -47,8 +47,8 @@ struct FT8ClusterAggregatorApp: App {
         }
         .defaultSize(width: 800, height: 800)
 
-        // Menu bar status item (always present)
-        MenuBarExtra("FT8ClusterAggregator", systemImage: "antenna.radiowaves.left.and.right") {
+        // Menu bar status item (always present) with custom template icon
+        MenuBarExtra {
             Button("Show Window") {
                 WindowManager.showMainWindow()
             }
@@ -65,6 +65,9 @@ struct FT8ClusterAggregatorApp: App {
                 NSApp.terminate(nil)
             }
             .keyboardShortcut("q", modifiers: [.command])
+        } label: {
+            Image("MenuBarIcon", bundle: .module)
+                .renderingMode(.template)
         }
     }
 }

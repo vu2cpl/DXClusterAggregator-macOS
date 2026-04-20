@@ -9,7 +9,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "FT8ClusterAggregator",
-            path: "FT8ClusterAggregator"
+            path: "FT8ClusterAggregator",
+            resources: [
+                .process("Resources")
+            ]
         )
     ]
 )

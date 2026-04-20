@@ -66,6 +66,26 @@ cp .build/release/FT8ClusterAggregator FT8ClusterAggregator.app/Contents/MacOS/
 # Copy the app icon
 cp AppIcon.icns FT8ClusterAggregator.app/Contents/Resources/
 
+# Copy the SwiftPM resource bundle (contains menu bar icon)
+cp -R .build/arm64-apple-macosx/release/FT8ClusterAggregator_FT8ClusterAggregator.bundle \
+      FT8ClusterAggregator.app/Contents/Resources/
+
+# Create minimal Info.plist for the resource bundle so codesign accepts it
+cat > FT8ClusterAggregator.app/Contents/Resources/FT8ClusterAggregator_FT8ClusterAggregator.bundle/Info.plist << 'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.vu2cpl.ft8clusteraggregator.resources</string>
+    <key>CFBundlePackageType</key>
+    <string>BNDL</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+</dict>
+</plist>
+PLIST
+
 # Create PkgInfo
 echo -n "APPL????" > FT8ClusterAggregator.app/Contents/PkgInfo
 
