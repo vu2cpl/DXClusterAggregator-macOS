@@ -32,6 +32,7 @@ class AppSettings: ObservableObject {
     @AppStorage("broadcastPort2") var broadcastPort2: Int = 2239
     @AppStorage("cqOnly") var cqOnly: Bool = false
     @AppStorage("newOnly") var newOnly: Bool = false
+    @AppStorage("hideDuplicates") var hideDuplicates: Bool = true
     @AppStorage("minimizeOnStart") var minimizeOnStart: Bool = false
 
     @Published var udpSources: [UDPSource] {

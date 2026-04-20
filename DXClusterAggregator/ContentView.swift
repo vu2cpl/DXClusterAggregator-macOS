@@ -593,6 +593,8 @@ struct ContentView: View {
             Toggle("CQ Only", isOn: $settings.cqOnly)
             Toggle("New Only", isOn: $settings.newOnly)
                 .help("Show only spots matching an enabled ClubLog alert (new DXCC/slot/band/mode)")
+            Toggle("Hide Duplicates", isOn: $settings.hideDuplicates)
+                .help("Collapse repeat spots of the same call/band/mode within a 60-second window")
             Toggle("Hide on Start", isOn: $settings.minimizeOnStart)
                 .help("When monitoring starts, hide the main window. Use the menu bar antenna icon to show it again.")
 
@@ -925,7 +927,31 @@ struct ContentView: View {
     }
 
     private var displayedSpots: [SpotMessage] {
-        spots.filter { shouldShow($0) }
+        let filtered = spots.filter { shouldShow($0) }
+        guard settings.hideDuplicates else { return filtered }
+
+        // Collapse duplicates: same CALL-BAND-MODE within 60s of each other.
+        // Keep only the FIRST occurrence in each 60-second window.
+        let window: TimeInterval = 60
+        var lastSeen: [String: Date] = [:]
+        var result: [SpotMessage] = []
+        for spot in filtered {
+            let key = duplicateKey(for: spot) ?? UUID().uuidString  // unique if no key -> always show
+            if let prev = lastSeen[key],
+               spot.time.timeIntervalSince(prev) < window {
+                continue  // duplicate within window
+            }
+            lastSeen[key] = spot.time
+            result.append(spot)
+        }
+        return result
+    }
+
+    private func duplicateKey(for spot: SpotMessage) -> String? {
+        guard let call = spot.dxCallsign?.uppercased() else { return nil }
+        let band = spot.bandName ?? ""
+        let mode = spot.mode.uppercased()
+        return "\(call)-\(band)-\(mode)"
     }
 
     @MainActor
@@ -980,10 +1006,7 @@ struct ContentView: View {
 
     /// Dedupe key: callsign + band + mode (and rough time bucket is implicit in window).
     private func broadcastKey(for spot: SpotMessage) -> String? {
-        guard let call = spot.dxCallsign?.uppercased() else { return nil }
-        let band = spot.bandName ?? ""
-        let mode = spot.mode.uppercased()
-        return "\(call)-\(band)-\(mode)"
+        duplicateKey(for: spot)
     }
 
     private func isRecentlyBroadcast(_ spot: SpotMessage) -> Bool {
