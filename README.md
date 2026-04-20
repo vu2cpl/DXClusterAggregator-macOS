@@ -43,15 +43,19 @@ Requires Xcode Command Line Tools (`xcode-select --install`).
 ```bash
 git clone https://github.com/vu2cpl/DXClusterAggregator-macOS.git
 cd DXClusterAggregator-macOS
-swift build -c release
+# Universal build (runs on both Apple Silicon and Intel Macs)
+SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk \
+  swift build -c release --arch arm64 --arch x86_64
 ```
 
-> **Important for macOS 26 (Tahoe) users:** If you are building on macOS 26, the binary will
-> link against SDK 26 and **will not run on macOS 15 or earlier**. To build a compatible binary,
-> use the macOS 15 SDK:
-> ```bash
-> SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk swift build -c release
-> ```
+> **Notes:**
+> - `--arch arm64 --arch x86_64` produces a universal binary that runs on both
+>   Intel Macs and Apple Silicon.
+> - On macOS 26 (Tahoe) you must pin the SDK to MacOSX15.sdk or earlier —
+>   binaries built with the system-default SDK 26 will refuse to launch on
+>   macOS 15 (Sequoia) and earlier.
+> - The universal binary is placed in `.build/apple/Products/Release/` (not
+>   `.build/release/`). Use that path when copying into the `.app`.
 
 #### Step 2: Create the .app Bundle
 
@@ -60,14 +64,14 @@ swift build -c release
 mkdir -p DXClusterAggregator.app/Contents/MacOS
 mkdir -p DXClusterAggregator.app/Contents/Resources
 
-# Copy the built binary
-cp .build/release/DXClusterAggregator DXClusterAggregator.app/Contents/MacOS/
+# Copy the built binary (universal)
+cp .build/apple/Products/Release/DXClusterAggregator DXClusterAggregator.app/Contents/MacOS/
 
 # Copy the app icon
 cp AppIcon.icns DXClusterAggregator.app/Contents/Resources/
 
 # Copy the SwiftPM resource bundle (contains menu bar icon)
-cp -R .build/arm64-apple-macosx/release/DXClusterAggregator_DXClusterAggregator.bundle \
+cp -R .build/apple/Products/Release/DXClusterAggregator_DXClusterAggregator.bundle \
       DXClusterAggregator.app/Contents/Resources/
 
 # Create minimal Info.plist for the resource bundle so codesign accepts it

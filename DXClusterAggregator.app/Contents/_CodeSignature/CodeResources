@@ -8,25 +8,29 @@
 		<data>
 		6kRneY4oBBvC0nxfSAuFfAFxBbI=
 		</data>
-		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Info.plist</key>
+		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Contents/Info.plist</key>
 		<data>
-		CPBISkV7OBPG4JEOLM/dJmh2hpc=
+		zSvMnO9eeMuHdcKZ8hUKWSYJD3k=
 		</data>
-		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/MenuBarIcon.png</key>
+		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Contents/Resources/MenuBarIcon.png</key>
 		<data>
 		R2KcF1i4HP9HXlcwgy5Qz8WHmqE=
 		</data>
-		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/MenuBarIcon@2x.png</key>
+		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Contents/Resources/MenuBarIcon@2x.png</key>
 		<data>
 		GaeDAt+V2RqHC/wUAbLNssMxoM4=
 		</data>
-		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/MenuBarIcon@3x.png</key>
+		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Contents/Resources/MenuBarIcon@3x.png</key>
 		<data>
 		1VMlE23tK2lyBThzFkj+QTGcayA=
 		</data>
-		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/MenuBarIcon_preview.png</key>
+		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Contents/Resources/MenuBarIcon_preview.png</key>
 		<data>
 		qfJjga6KisXa+t0VZVxiQJS5QsU=
+		</data>
+		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Info.plist</key>
+		<data>
+		CPBISkV7OBPG4JEOLM/dJmh2hpc=
 		</data>
 		<key>Resources/MenuBarIcon.png</key>
 		<data>
@@ -54,39 +58,46 @@
 			yzGxmJhmzQ8DZxLPA+gmkmMR7UANFp0fq9wGxrXqpAw=
 			</data>
 		</dict>
-		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Info.plist</key>
+		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Contents/Info.plist</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			wFPT9PjO2Nr4HPa9+dNxcy72+ePaOt7WxefqhIwRQ+s=
+			0Jp2U76LqHTauFmUep+NZGV9P+1NJKVgx5Xpb+/9Tuo=
 			</data>
 		</dict>
-		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/MenuBarIcon.png</key>
+		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Contents/Resources/MenuBarIcon.png</key>
 		<dict>
 			<key>hash2</key>
 			<data>
 			JcKlf+Nc+uQB2WDzFLuCxNEKecbb+bLBSdf5CxrnE38=
 			</data>
 		</dict>
-		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/MenuBarIcon@2x.png</key>
+		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Contents/Resources/MenuBarIcon@2x.png</key>
 		<dict>
 			<key>hash2</key>
 			<data>
 			nxBYWj+0Fo1yBAQtCS17PaJqKrpoi/tk2lF17WdA6m0=
 			</data>
 		</dict>
-		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/MenuBarIcon@3x.png</key>
+		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Contents/Resources/MenuBarIcon@3x.png</key>
 		<dict>
 			<key>hash2</key>
 			<data>
 			Dx7/sl4T79KY0uusJV0+4NKkd6TMRttiqvswS00e/Sg=
 			</data>
 		</dict>
-		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/MenuBarIcon_preview.png</key>
+		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Contents/Resources/MenuBarIcon_preview.png</key>
 		<dict>
 			<key>hash2</key>
 			<data>
 			eEKBl7iY2YbwAXaOE6xej2yFPDvTKomb8ZcaxSS2VNY=
+			</data>
+		</dict>
+		<key>Resources/DXClusterAggregator_DXClusterAggregator.bundle/Info.plist</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			wFPT9PjO2Nr4HPa9+dNxcy72+ePaOt7WxefqhIwRQ+s=
 			</data>
 		</dict>
 		<key>Resources/MenuBarIcon.png</key>
