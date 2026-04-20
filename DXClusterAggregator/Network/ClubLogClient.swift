@@ -139,8 +139,11 @@ class ClubLogClient: ObservableObject {
                 }
 
                 if let d = dxcc {
+                    // Collapse FT8/FT4/JT*/RTTY/etc. → DATA; CW / PHONE separate.
+                    // This matches how DXCC/LOTW/ClubLog award tracking groups modes.
+                    let canonicalMode = ModeNormalizer.canonical(mode)
                     newMatrix.record(
-                        dxcc: d, band: band, mode: mode,
+                        dxcc: d, band: band, mode: canonicalMode,
                         call: call, confirmed: record.isConfirmed
                     )
                 }

@@ -34,7 +34,9 @@ struct AlertClassifier {
 
         let dxccId = resolver.resolve(call)
         let dxccName = dxccId.flatMap { resolver.entity(for: $0)?.name }
-        let normalizedMode = mode.uppercased().isEmpty ? "FT8" : mode.uppercased()
+        // Collapse FT8/FT4/JT*/RTTY/... → DATA so digital modes are treated
+        // as one bucket for DXCC-style slot tracking.
+        let normalizedMode = ModeNormalizer.canonical(mode)
 
         // Without DXCC or band we can't classify
         guard let dxcc = dxccId, let bnd = band else {
