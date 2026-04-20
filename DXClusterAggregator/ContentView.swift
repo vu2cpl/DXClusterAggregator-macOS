@@ -561,6 +561,17 @@ struct ContentView: View {
             // Persist timing info
             settings.clubLog.lastRefresh = clubLogClient.lastRefresh
             settings.clubLog.qsoCount = clubLogClient.qsoCount
+            // Re-classify existing spots so the table picks up DXCC + colors
+            await MainActor.run { reclassifyAllSpots() }
+        }
+    }
+
+    /// Apply classifier to every spot currently in memory. Useful after a ClubLog
+    /// refresh so the table doesn't need new spots to pick up DXCC names / colors.
+    @MainActor
+    private func reclassifyAllSpots() {
+        for i in spots.indices {
+            classifySpot(&spots[i])
         }
     }
 
@@ -620,7 +631,7 @@ struct ContentView: View {
 
     private var spotsTable: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 0) {
+            HStack(spacing: 8) {
                 Text("").frame(width: 20, alignment: .leading)
                 Text("Time").frame(width: 55, alignment: .leading)
                 Text("Source").frame(width: 70, alignment: .leading)
@@ -642,7 +653,7 @@ struct ContentView: View {
             ScrollViewReader { proxy in
                 let visible = displayedSpots
                 List(visible) { spot in
-                    HStack(spacing: 0) {
+                    HStack(spacing: 8) {
                         Text(alertIcon(spot.alertLevel)).frame(width: 20, alignment: .leading)
                         Text(spot.timeString).frame(width: 55, alignment: .leading)
                         Text(spot.sourceName).frame(width: 70, alignment: .leading)
