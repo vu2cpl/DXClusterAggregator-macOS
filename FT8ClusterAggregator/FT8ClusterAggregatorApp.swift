@@ -66,8 +66,50 @@ struct FT8ClusterAggregatorApp: App {
             }
             .keyboardShortcut("q", modifiers: [.command])
         } label: {
-            Image("MenuBarIcon", bundle: .module)
-                .renderingMode(.template)
+            MenuBarLabel()
         }
+    }
+}
+
+/// Loads the custom menu bar icon with fallback to an SF Symbol.
+/// Searches several locations to handle both `swift run` and packaged .app bundles.
+struct MenuBarLabel: View {
+    var body: some View {
+        if let image = Self.loadImage() {
+            Image(nsImage: image)
+        } else {
+            Image(systemName: "dot.radiowaves.up.forward")
+        }
+    }
+
+    private static func loadImage() -> NSImage? {
+        let candidates: [URL?] = [
+            // SwiftPM-generated resource bundle in .app Resources
+            Bundle.main.url(
+                forResource: "MenuBarIcon",
+                withExtension: "png",
+                subdirectory: "FT8ClusterAggregator_FT8ClusterAggregator.bundle"
+            ),
+            // Directly in main bundle (if we copied it into Resources/)
+            Bundle.main.url(forResource: "MenuBarIcon", withExtension: "png"),
+            // Fallback: look next to the executable (for `swift run`)
+            {
+                let exe = Bundle.main.executableURL?.deletingLastPathComponent()
+                return exe?.appendingPathComponent(
+                    "FT8ClusterAggregator_FT8ClusterAggregator.bundle/MenuBarIcon.png"
+                )
+            }()
+        ]
+
+        for url in candidates {
+            if let url = url, FileManager.default.fileExists(atPath: url.path),
+               let img = NSImage(contentsOf: url) {
+                img.isTemplate = true
+                // Slightly larger default size for menu bar (macOS will scale)
+                img.size = NSSize(width: 18, height: 18)
+                return img
+            }
+        }
+        return nil
     }
 }
