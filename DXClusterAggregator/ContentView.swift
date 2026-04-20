@@ -601,7 +601,6 @@ struct ContentView: View {
 
     private var controlSection: some View {
         HStack {
-            Toggle("CQ Only", isOn: $settings.cqOnly)
             Toggle("New Only", isOn: $settings.newOnly)
                 .help("Show only spots matching an enabled ClubLog alert (new DXCC/slot/band/mode)")
             Toggle("Hide Duplicates", isOn: $settings.hideDuplicates)
