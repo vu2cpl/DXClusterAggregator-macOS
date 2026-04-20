@@ -50,29 +50,15 @@ struct AlertClassifier {
             return Classification(level: .none, dxccId: dxccId, dxccName: dxccName, band: band)
         }
 
-        // Respect the user's "Import Bands" selection as a filter for ALERTS too.
-        // If the user has narrowed their log import to specific bands (e.g. HF
-        // only), spots on other bands would otherwise all look like "new band"
-        // alerts because nothing was imported for those bands.
-        if !isBandOfInterest(bnd) {
-            return Classification(level: .none, dxccId: dxcc, dxccName: dxccName, band: bnd)
-        }
-
-        // Apply filter toggles to decide the highest-priority applicable level
+        // Apply filter toggles to decide the highest-priority applicable level.
+        // Note: a separate "display band filter" in the main UI handles which
+        // bands appear in the spots table / rebroadcast - classification itself
+        // no longer depends on the ClubLog import-band selection, so that the
+        // matrix's presence-of-data (not the import subset) drives alerts.
         let raw = rawLevel(dxcc: dxcc, band: bnd, mode: normalizedMode)
         let filtered = applyFilter(raw)
 
         return Classification(level: filtered, dxccId: dxcc, dxccName: dxccName, band: bnd)
-    }
-
-    /// Is this band one the user wants alerts for?
-    /// Empty importBands = all bands. The special "__NONE__" sentinel means
-    /// the user explicitly cleared the list (block everything).
-    private func isBandOfInterest(_ band: String) -> Bool {
-        let selection = config.importBands
-        if selection.isEmpty { return true }
-        if selection == ["__NONE__"] { return false }
-        return selection.contains(band)
     }
 
     private func rawLevel(dxcc: Int, band: String, mode: String) -> AlertLevel {

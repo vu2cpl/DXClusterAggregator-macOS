@@ -57,6 +57,13 @@ class AppSettings: ObservableObject {
         didSet { saveCodable(Array(selectedSources), key: "selectedSources") }
     }
 
+    /// Band filter for the spots table (display + alerts).
+    /// Empty set = show all bands. Independent from clubLog.importBands
+    /// which only controls which QSOs are imported into the log matrix.
+    @Published var displayBands: Set<String> {
+        didSet { saveCodable(Array(displayBands), key: "displayBands") }
+    }
+
     init() {
         self.udpSources = Self.loadCodable(key: "udpSources") ?? UDPSource.defaultSources
         self.dxClusterSources = Self.loadCodable(key: "dxClusterSources") ?? []
@@ -66,6 +73,11 @@ class AppSettings: ObservableObject {
             self.selectedSources = Set(arr)
         } else {
             self.selectedSources = []
+        }
+        if let arr: [String] = Self.loadCodable(key: "displayBands") {
+            self.displayBands = Set(arr)
+        } else {
+            self.displayBands = []
         }
     }
 

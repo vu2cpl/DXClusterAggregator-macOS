@@ -608,6 +608,7 @@ struct ContentView: View {
                 .help("Collapse repeat spots of the same call/band/mode within a 60-second window")
 
             sourceFilterMenu
+            bandFilterMenu
 
             Toggle("Hide on Start", isOn: $settings.minimizeOnStart)
                 .help("When monitoring starts, hide the main window. Use the menu bar antenna icon to show it again.")
@@ -978,6 +979,55 @@ struct ContentView: View {
         .help("Filter the spots table by source. Multi-select supported.")
     }
 
+    /// All common ham-radio bands for the dropdown.
+    private static let allBandsForFilter: [String] = [
+        "160M","80M","60M","40M","30M","20M","17M","15M","12M","10M",
+        "6M","4M","2M","1.25M","70CM"
+    ]
+
+    private var bandFilterMenu: some View {
+        let selected = settings.displayBands
+        let label: String
+        if selected.isEmpty {
+            label = "Bands: All"
+        } else if selected.count == 1 {
+            label = "Band: \(selected.first!)"
+        } else {
+            label = "Bands: \(selected.count)"
+        }
+
+        return Menu {
+            Button(action: { settings.displayBands = [] }) {
+                Label("All Bands", systemImage: selected.isEmpty ? "checkmark" : "")
+            }
+            Button(action: {
+                settings.displayBands = Set(["160M","80M","60M","40M","30M","20M","17M","15M","12M","10M"])
+            }) {
+                Text("HF Only")
+            }
+            Divider()
+            ForEach(Self.allBandsForFilter, id: \.self) { band in
+                Button(action: {
+                    if settings.displayBands.contains(band) {
+                        settings.displayBands.remove(band)
+                    } else {
+                        settings.displayBands.insert(band)
+                    }
+                }) {
+                    Label(band, systemImage: selected.contains(band) ? "checkmark" : "")
+                }
+            }
+            Divider()
+            Button("Clear filter") { settings.displayBands = [] }
+                .disabled(selected.isEmpty)
+        } label: {
+            Label(label, systemImage: "waveform")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("Filter the spots table by band. Multi-select supported.")
+    }
+
     private func isNewAlert(_ level: AlertLevel) -> Bool {
         switch level {
         case .newDXCC, .newSlot, .newBand, .newMode: return true
@@ -988,17 +1038,16 @@ struct ContentView: View {
     private func shouldShow(_ spot: SpotMessage) -> Bool {
         if settings.cqOnly && !spot.isCQ { return false }
         if settings.newOnly && !isNewAlert(spot.alertLevel) { return false }
+        if !settings.displayBands.isEmpty,
+           let band = spot.bandName,
+           !settings.displayBands.contains(band) { return false }
+        if !settings.selectedSources.isEmpty,
+           !settings.selectedSources.contains(spot.sourceName) { return false }
         return true
     }
 
     private var displayedSpots: [SpotMessage] {
-        var filtered = spots.filter { shouldShow($0) }
-
-        // Source filter (empty = all sources)
-        if !settings.selectedSources.isEmpty {
-            filtered = filtered.filter { settings.selectedSources.contains($0.sourceName) }
-        }
-
+        let filtered = spots.filter { shouldShow($0) }
         guard settings.hideDuplicates else { return filtered }
 
         // Collapse duplicates: same CALL-BAND-MODE within 60s of each other.
