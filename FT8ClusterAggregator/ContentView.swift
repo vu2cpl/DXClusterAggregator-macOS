@@ -471,10 +471,10 @@ struct ContentView: View {
 
     private func alertColor(_ level: AlertLevel) -> Color {
         switch level {
-        case .newDXCC: return Color.red.opacity(0.25)
-        case .newSlot: return Color.orange.opacity(0.25)
-        case .newBand: return Color.blue.opacity(0.25)
-        case .newMode: return Color(red: 1.0, green: 0.75, blue: 0.0).opacity(0.30) // amber
+        case .newDXCC: return Color.red.opacity(0.40)
+        case .newSlot: return Color.orange.opacity(0.40)
+        case .newBand: return Color.blue.opacity(0.35)
+        case .newMode: return Color(red: 1.0, green: 0.75, blue: 0.0).opacity(0.45) // amber
         case .worked:  return Color.clear
         case .none:    return Color.clear
         }
@@ -560,7 +560,7 @@ struct ContentView: View {
                     }
                     .font(.system(.caption, design: .monospaced))
                     .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
-                    .background(alertColor(spot.alertLevel))
+                    .listRowBackground(alertColor(spot.alertLevel))
                     .id(spot.id)
                 }
                 .listStyle(.plain)
