@@ -7,50 +7,66 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 
 
+def find_bold_font(font_size):
+    """Try to locate a genuinely bold font on macOS. Falls back to Helvetica."""
+    # Direct bold fonts
+    direct = [
+        "/System/Library/Fonts/Helvetica.ttc",   # indices 1 & 2 are Bold variants
+        "/System/Library/Fonts/HelveticaNeue.ttc",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+        "/Library/Fonts/Arial Bold.ttf",
+        "/System/Library/Fonts/SFCompactText.ttf",
+    ]
+    # Helvetica.ttc indices: 0=Regular, 1=Bold, 2=Light, 3=Oblique, 4=BoldOblique...
+    for path in direct:
+        for index in (1, 2, 0):
+            try:
+                f = ImageFont.truetype(path, font_size, index=index)
+                # Heuristic: only accept if it looks bold (check weight via name)
+                if "Bold" in f.getname()[1] or index == 1:
+                    return f
+            except Exception:
+                continue
+    # Fallback: regular
+    try:
+        return ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
+    except Exception:
+        return ImageFont.load_default()
+
+
 def create_menubar_icon(size=44):
     img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
     BLACK = (0, 0, 0, 255)
-
-    # Clean, bold FT8 text filling most of the icon width.
-    # Try a bold font first; fall back progressively.
-    font = None
-    font_size = int(size * 0.80)  # tall so the text dominates
-    for path in [
-        "/System/Library/Fonts/Helvetica.ttc",
-        "/System/Library/Fonts/HelveticaNeue.ttc",
-        "/Library/Fonts/Arial Bold.ttf",
-    ]:
-        try:
-            font = ImageFont.truetype(path, font_size, index=1)  # index 1 = bold variant
-            break
-        except Exception:
-            try:
-                font = ImageFont.truetype(path, font_size)
-                break
-            except Exception:
-                continue
-    if font is None:
-        font = ImageFont.load_default()
-
     text = "DX"
-    # Shrink until text fits within icon width with ~5% padding
+
+    font_size = int(size * 0.82)  # tall so text dominates
+    font = find_bold_font(font_size)
+
+    # Shrink until text fits
     max_width = int(size * 0.95)
     while font_size > 6:
         bbox = draw.textbbox((0, 0), text, font=font)
-        tw = bbox[2] - bbox[0]
-        if tw <= max_width:
+        if bbox[2] - bbox[0] <= max_width:
             break
         font_size -= 1
-        font = ImageFont.truetype(font.path if hasattr(font, "path") else "/System/Library/Fonts/Helvetica.ttc", font_size)
+        font = find_bold_font(font_size)
 
     bbox = draw.textbbox((0, 0), text, font=font)
     tw = bbox[2] - bbox[0]
     th = bbox[3] - bbox[1]
     text_x = (size - tw) // 2 - bbox[0]
     text_y = (size - th) // 2 - bbox[1]
-    draw.text((text_x, text_y), text, fill=BLACK, font=font)
+
+    # Extra weight: draw the text multiple times with 1px offsets (faux-bold / thick stroke)
+    stroke = max(1, size // 22)  # scale stroke with size
+    offsets = []
+    for dx in range(-stroke, stroke + 1):
+        for dy in range(-stroke, stroke + 1):
+            offsets.append((dx, dy))
+    for dx, dy in offsets:
+        draw.text((text_x + dx, text_y + dy), text, fill=BLACK, font=font)
 
     return img
 
