@@ -2,14 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "FT8ClusterAggregator",
+    name: "DXClusterAggregator",
     platforms: [
         .macOS(.v14)
     ],
     targets: [
         .executableTarget(
-            name: "FT8ClusterAggregator",
-            path: "FT8ClusterAggregator",
+            name: "DXClusterAggregator",
+            path: "DXClusterAggregator",
             resources: [
                 .process("Resources")
             ]

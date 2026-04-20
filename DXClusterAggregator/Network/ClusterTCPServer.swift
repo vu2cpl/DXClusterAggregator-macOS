@@ -4,7 +4,7 @@ import Network
 class ClusterTCPServer: ObservableObject {
     private var listener: NWListener?
     private var connections: [NWConnection] = []
-    private let queue = DispatchQueue(label: "com.ft8cluster.tcpserver")
+    private let queue = DispatchQueue(label: "com.dxcluster.tcpserver")
     private let connectionsLock = NSLock()
 
     @Published var isRunning = false
@@ -98,7 +98,7 @@ class ClusterTCPServer: ObservableObject {
         connection.start(queue: queue)
 
         // Send welcome message
-        let welcome = "DX Cluster Server - FT8ClusterAggregator for macOS\r\n"
+        let welcome = "DX Cluster Server - DXClusterAggregator for macOS\r\n"
         if let data = welcome.data(using: .utf8) {
             connection.send(content: data, completion: .contentProcessed { _ in })
         }

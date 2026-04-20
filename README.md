@@ -1,4 +1,4 @@
-# FT8ClusterAggregator for macOS
+# DXClusterAggregator for macOS
 
 A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JTDX instances and DX Cluster nodes into a unified telnet cluster server.
 
@@ -16,19 +16,19 @@ A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JT
 
 ### Option 1: Download Pre-built App
 
-1. Download `FT8ClusterAggregator.app` from [Releases](https://github.com/vu2cpl/FT8ClusterAggregator-macOS/releases)
+1. Download `DXClusterAggregator.app` from [Releases](https://github.com/vu2cpl/DXClusterAggregator-macOS/releases)
 2. Move it to your Applications folder (or anywhere you like)
 3. **Important — First launch on macOS:**
 
    Since the app is not notarised through the Apple Developer Program, macOS will block it by default. To fix this, open Terminal and run:
 
    ```bash
-   xattr -cr /path/to/FT8ClusterAggregator.app
+   xattr -cr /path/to/DXClusterAggregator.app
    ```
 
    For example, if you placed it in Applications:
    ```bash
-   xattr -cr /Applications/FT8ClusterAggregator.app
+   xattr -cr /Applications/DXClusterAggregator.app
    ```
 
 4. Right-click the app and select **"Open"** (not double-click) for the first launch
@@ -41,8 +41,8 @@ Requires Xcode Command Line Tools (`xcode-select --install`).
 #### Step 1: Clone and Build
 
 ```bash
-git clone https://github.com/vu2cpl/FT8ClusterAggregator-macOS.git
-cd FT8ClusterAggregator-macOS
+git clone https://github.com/vu2cpl/DXClusterAggregator-macOS.git
+cd DXClusterAggregator-macOS
 swift build -c release
 ```
 
@@ -57,27 +57,27 @@ swift build -c release
 
 ```bash
 # Create bundle directory structure
-mkdir -p FT8ClusterAggregator.app/Contents/MacOS
-mkdir -p FT8ClusterAggregator.app/Contents/Resources
+mkdir -p DXClusterAggregator.app/Contents/MacOS
+mkdir -p DXClusterAggregator.app/Contents/Resources
 
 # Copy the built binary
-cp .build/release/FT8ClusterAggregator FT8ClusterAggregator.app/Contents/MacOS/
+cp .build/release/DXClusterAggregator DXClusterAggregator.app/Contents/MacOS/
 
 # Copy the app icon
-cp AppIcon.icns FT8ClusterAggregator.app/Contents/Resources/
+cp AppIcon.icns DXClusterAggregator.app/Contents/Resources/
 
 # Copy the SwiftPM resource bundle (contains menu bar icon)
-cp -R .build/arm64-apple-macosx/release/FT8ClusterAggregator_FT8ClusterAggregator.bundle \
-      FT8ClusterAggregator.app/Contents/Resources/
+cp -R .build/arm64-apple-macosx/release/DXClusterAggregator_DXClusterAggregator.bundle \
+      DXClusterAggregator.app/Contents/Resources/
 
 # Create minimal Info.plist for the resource bundle so codesign accepts it
-cat > FT8ClusterAggregator.app/Contents/Resources/FT8ClusterAggregator_FT8ClusterAggregator.bundle/Info.plist << 'PLIST'
+cat > DXClusterAggregator.app/Contents/Resources/DXClusterAggregator_DXClusterAggregator.bundle/Info.plist << 'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>com.vu2cpl.ft8clusteraggregator.resources</string>
+    <string>com.vu2cpl.dxclusteraggregator.resources</string>
     <key>CFBundlePackageType</key>
     <string>BNDL</string>
     <key>CFBundleVersion</key>
@@ -87,26 +87,26 @@ cat > FT8ClusterAggregator.app/Contents/Resources/FT8ClusterAggregator_FT8Cluste
 PLIST
 
 # Create PkgInfo
-echo -n "APPL????" > FT8ClusterAggregator.app/Contents/PkgInfo
+echo -n "APPL????" > DXClusterAggregator.app/Contents/PkgInfo
 
 # Create Info.plist
-cat > FT8ClusterAggregator.app/Contents/Info.plist << 'EOF'
+cat > DXClusterAggregator.app/Contents/Info.plist << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>FT8ClusterAggregator</string>
+    <string>DXClusterAggregator</string>
     <key>CFBundleDisplayName</key>
-    <string>FT8 Cluster Aggregator</string>
+    <string>DX Cluster Aggregator</string>
     <key>CFBundleIdentifier</key>
-    <string>com.vu2cpl.ft8clusteraggregator</string>
+    <string>com.vu2cpl.dxclusteraggregator</string>
     <key>CFBundleVersion</key>
     <string>1.2.0</string>
     <key>CFBundleShortVersionString</key>
     <string>1.2.0</string>
     <key>CFBundleExecutable</key>
-    <string>FT8ClusterAggregator</string>
+    <string>DXClusterAggregator</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleIconFile</key>
@@ -116,7 +116,7 @@ cat > FT8ClusterAggregator.app/Contents/Info.plist << 'EOF'
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>FT8 Cluster Aggregator needs network access to receive WSJT-X spots, connect to DX cluster nodes, and broadcast cluster data.</string>
+    <string>DX Cluster Aggregator needs network access to receive WSJT-X spots, connect to DX cluster nodes, and broadcast cluster data.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsLocalNetworking</key>
@@ -131,20 +131,20 @@ EOF
 
 ```bash
 # Ad-hoc code sign
-codesign --force --deep --sign - FT8ClusterAggregator.app
+codesign --force --deep --sign - DXClusterAggregator.app
 
 # Launch the app
-open FT8ClusterAggregator.app
+open DXClusterAggregator.app
 ```
 
 #### Optional: Install to Applications
 
 ```bash
-cp -r FT8ClusterAggregator.app /Applications/
+cp -r DXClusterAggregator.app /Applications/
 ```
 
 > **Note:** If sharing the built `.app` with others, they will need to run
-> `xattr -cr /path/to/FT8ClusterAggregator.app` and right-click > Open on first launch
+> `xattr -cr /path/to/DXClusterAggregator.app` and right-click > Open on first launch
 > (see Option 1 above).
 
 ## Quick Start
@@ -172,7 +172,7 @@ cp -r FT8ClusterAggregator.app /Applications/
 
 ## Documentation
 
-See the [User Manual (PDF)](FT8ClusterAggregator_UserManual.pdf) for detailed instructions.
+See the [User Manual (PDF)](DXClusterAggregator_UserManual.pdf) for detailed instructions.
 
 ## Credits
 

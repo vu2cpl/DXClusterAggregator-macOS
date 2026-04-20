@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a professional PDF user manual for FT8ClusterAggregator."""
+"""Generate a professional PDF user manual for DXClusterAggregator."""
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -14,7 +14,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 import os
 
-OUTPUT_PATH = "/Users/manoj/Documents/Claude/code/FT8ClusterAggregator/FT8ClusterAggregator_UserManual.pdf"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_PATH = os.path.join(BASE_DIR, "DXClusterAggregator_UserManual.pdf")
 
 # Colors
 NAVY = HexColor("#141E3C")
@@ -208,7 +209,7 @@ def add_page_number(canvas_obj, doc):
     canvas_obj.setFont('Helvetica', 8)
     canvas_obj.setFillColor(grey)
     page_num = canvas_obj.getPageNumber()
-    text = f"FT8ClusterAggregator User Manual  |  Page {page_num}"
+    text = f"DXClusterAggregator User Manual  |  Page {page_num}"
     canvas_obj.drawCentredString(A4[0] / 2, 15 * mm, text)
 
     # Top accent line
@@ -222,7 +223,7 @@ def build_cover():
     """Build cover page elements."""
     elements = []
     elements.append(Spacer(1, 60 * mm))
-    elements.append(Paragraph("FT8 Cluster Aggregator", styles['CoverTitle']))
+    elements.append(Paragraph("DX Cluster Aggregator", styles['CoverTitle']))
     elements.append(Spacer(1, 4 * mm))
     elements.append(Paragraph("for macOS", styles['CoverSubtitle']))
     elements.append(Spacer(1, 8 * mm))
@@ -230,7 +231,7 @@ def build_cover():
     elements.append(Spacer(1, 8 * mm))
     elements.append(Paragraph("User Manual", styles['CoverSubtitle']))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(Paragraph("Version 1.5.0", styles['CoverVersion']))
+    elements.append(Paragraph("Version 1.6.0", styles['CoverVersion']))
     elements.append(Spacer(1, 30 * mm))
 
     elements.append(Paragraph("Aggregate FT8/FT4 spots from multiple WSJT-X/JTDX instances", styles['Credits']))
@@ -317,7 +318,7 @@ def build_content():
     elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
 
     elements.append(Paragraph(
-        "FT8ClusterAggregator is a macOS application designed for amateur radio operators. "
+        "DXClusterAggregator is a macOS application designed for amateur radio operators. "
         "It collects FT8, FT4, and other digital mode spots from multiple sources and aggregates "
         "them into a unified DX cluster feed that can be consumed by logging software such as "
         "Logger32, DXLab, N1MM+, Log4OM, and others.",
@@ -385,7 +386,7 @@ def build_content():
 
     elements.append(Paragraph("3.1  From Pre-built App Bundle", styles['SectionTitle']))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> Locate <b>FT8ClusterAggregator.app</b> in the distribution folder",
+        "<bullet>&bull;</bullet> Locate <b>DXClusterAggregator.app</b> in the distribution folder",
         styles['BulletItem']
     ))
     elements.append(Paragraph(
@@ -405,7 +406,7 @@ def build_content():
         "Alternatively, open Terminal and run the following command to bypass Gatekeeper:",
         styles['Body']
     ))
-    elements.append(Paragraph("xattr -cr /path/to/FT8ClusterAggregator.app", styles['CodeBlock']))
+    elements.append(Paragraph("xattr -cr /path/to/DXClusterAggregator.app", styles['CodeBlock']))
     elements.append(Paragraph(
         "Then right-click the app and select \"Open\" for the first launch. After that it will "
         "open normally with a double-click.",
@@ -419,8 +420,8 @@ def build_content():
         styles['Body']
     ))
     elements.append(Paragraph("Step 1: Clone and build", styles['SubSection']))
-    elements.append(Paragraph("git clone https://github.com/vu2cpl/FT8ClusterAggregator-macOS.git", styles['CodeBlock']))
-    elements.append(Paragraph("cd FT8ClusterAggregator-macOS", styles['CodeBlock']))
+    elements.append(Paragraph("git clone https://github.com/vu2cpl/DXClusterAggregator-macOS.git", styles['CodeBlock']))
+    elements.append(Paragraph("cd DXClusterAggregator-macOS", styles['CodeBlock']))
     elements.append(Paragraph("swift build -c release", styles['CodeBlock']))
 
     elements.append(Paragraph("3.3  Creating the .app Bundle", styles['SectionTitle']))
@@ -431,28 +432,28 @@ def build_content():
     ))
 
     elements.append(Paragraph("Step 1: Create the bundle directory structure", styles['SubSection']))
-    elements.append(Paragraph("mkdir -p FT8ClusterAggregator.app/Contents/MacOS", styles['CodeBlock']))
-    elements.append(Paragraph("mkdir -p FT8ClusterAggregator.app/Contents/Resources", styles['CodeBlock']))
+    elements.append(Paragraph("mkdir -p DXClusterAggregator.app/Contents/MacOS", styles['CodeBlock']))
+    elements.append(Paragraph("mkdir -p DXClusterAggregator.app/Contents/Resources", styles['CodeBlock']))
 
     elements.append(Paragraph("Step 2: Copy the binary and icon", styles['SubSection']))
-    elements.append(Paragraph("cp .build/release/FT8ClusterAggregator FT8ClusterAggregator.app/Contents/MacOS/", styles['CodeBlock']))
-    elements.append(Paragraph("cp AppIcon.icns FT8ClusterAggregator.app/Contents/Resources/", styles['CodeBlock']))
-    elements.append(Paragraph('echo -n "APPL????" > FT8ClusterAggregator.app/Contents/PkgInfo', styles['CodeBlock']))
+    elements.append(Paragraph("cp .build/release/DXClusterAggregator DXClusterAggregator.app/Contents/MacOS/", styles['CodeBlock']))
+    elements.append(Paragraph("cp AppIcon.icns DXClusterAggregator.app/Contents/Resources/", styles['CodeBlock']))
+    elements.append(Paragraph('echo -n "APPL????" > DXClusterAggregator.app/Contents/PkgInfo', styles['CodeBlock']))
 
     elements.append(Paragraph("Step 3: Create the Info.plist", styles['SubSection']))
     elements.append(Paragraph(
-        "Create the file FT8ClusterAggregator.app/Contents/Info.plist with the following content "
+        "Create the file DXClusterAggregator.app/Contents/Info.plist with the following content "
         "(a template is provided in the project README):",
         styles['Body']
     ))
 
     plist_fields = [
         ['Key', 'Value'],
-        ['CFBundleName', 'FT8ClusterAggregator'],
-        ['CFBundleDisplayName', 'FT8 Cluster Aggregator'],
-        ['CFBundleIdentifier', 'com.vu2cpl.ft8clusteraggregator'],
+        ['CFBundleName', 'DXClusterAggregator'],
+        ['CFBundleDisplayName', 'DX Cluster Aggregator'],
+        ['CFBundleIdentifier', 'com.vu2cpl.dxclusteraggregator'],
         ['CFBundleVersion', '1.2.0'],
-        ['CFBundleExecutable', 'FT8ClusterAggregator'],
+        ['CFBundleExecutable', 'DXClusterAggregator'],
         ['CFBundlePackageType', 'APPL'],
         ['CFBundleIconFile', 'AppIcon'],
         ['LSMinimumSystemVersion', '14.0'],
@@ -481,15 +482,15 @@ def build_content():
     ))
 
     elements.append(Paragraph("Step 4: Sign and launch", styles['SubSection']))
-    elements.append(Paragraph("codesign --force --deep --sign - FT8ClusterAggregator.app", styles['CodeBlock']))
-    elements.append(Paragraph("open FT8ClusterAggregator.app", styles['CodeBlock']))
+    elements.append(Paragraph("codesign --force --deep --sign - DXClusterAggregator.app", styles['CodeBlock']))
+    elements.append(Paragraph("open DXClusterAggregator.app", styles['CodeBlock']))
 
     elements.append(Paragraph("Step 5 (Optional): Install to Applications", styles['SubSection']))
-    elements.append(Paragraph("cp -r FT8ClusterAggregator.app /Applications/", styles['CodeBlock']))
+    elements.append(Paragraph("cp -r DXClusterAggregator.app /Applications/", styles['CodeBlock']))
 
     elements.append(Paragraph(
         "If sharing the built .app with others, they will need to run "
-        "xattr -cr /path/to/FT8ClusterAggregator.app and right-click > Open on the first launch, "
+        "xattr -cr /path/to/DXClusterAggregator.app and right-click > Open on the first launch, "
         "as the app is not notarised through the Apple Developer Program.",
         styles['Note']
     ))
@@ -501,7 +502,7 @@ def build_content():
 
     elements.append(Paragraph("4.1  Main Window Overview", styles['SectionTitle']))
     elements.append(Paragraph(
-        "When you launch FT8ClusterAggregator, you will see the main window with the following sections from top to bottom. "
+        "When you launch DXClusterAggregator, you will see the main window with the following sections from top to bottom. "
         "The <b>Hide Settings</b> button in the header collapses the entire configuration panel "
         "(Configuration, UDP Sources, DX Cluster, ClubLog) so the spots table can use the full window. "
         "Click <b>Show Settings</b> to bring the configuration back.",
@@ -911,7 +912,7 @@ def build_content():
     ))
     elements.append(Paragraph(
         "The downloaded data is cached locally at "
-        "~/Library/Application Support/FT8ClusterAggregator/ so the app loads instantly on next "
+        "~/Library/Application Support/DXClusterAggregator/ so the app loads instantly on next "
         "launch without re-downloading. You should refresh periodically (e.g. after each logging "
         "session) to keep the worked-status data up to date.",
         styles['Body']
@@ -1009,7 +1010,7 @@ def build_content():
     elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
 
     elements.append(Paragraph(
-        "FT8ClusterAggregator can push alerts to your Telegram chat and/or to the macOS "
+        "DXClusterAggregator can push alerts to your Telegram chat and/or to the macOS "
         "Notification Center whenever a spot matching your selected alert types arrives. "
         "Alerts are throttled per callsign by a configurable cooldown to prevent spam.",
         styles['Body']
@@ -1025,7 +1026,7 @@ def build_content():
         styles['BulletItem']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> In FT8ClusterAggregator, open the <b>Notifications</b> section and enable <b>Telegram</b>",
+        "<bullet>&bull;</bullet> In DXClusterAggregator, open the <b>Notifications</b> section and enable <b>Telegram</b>",
         styles['BulletItem']
     ))
     elements.append(Paragraph(
@@ -1036,13 +1037,13 @@ def build_content():
     elements.append(Paragraph("10.2  macOS Notifications", styles['SectionTitle']))
     elements.append(Paragraph(
         "Enable the <b>macOS Notifications</b> toggle. The first time you enable it, macOS will "
-        "prompt you to allow notifications from FT8ClusterAggregator. Click <b>Allow</b>. Banners "
+        "prompt you to allow notifications from DXClusterAggregator. Click <b>Allow</b>. Banners "
         "will then appear in the corner of your screen for each matching spot.",
         styles['Body']
     ))
     elements.append(Paragraph(
         "If you accidentally denied permission, open System Settings > Notifications, find "
-        "FT8ClusterAggregator in the list, and re-enable Allow Notifications.",
+        "DXClusterAggregator in the list, and re-enable Allow Notifications.",
         styles['Note']
     ))
 
@@ -1068,7 +1069,7 @@ def build_content():
     elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
 
     elements.append(Paragraph(
-        "FT8ClusterAggregator acts as a telnet DX cluster server. To connect your logging software:",
+        "DXClusterAggregator acts as a telnet DX cluster server. To connect your logging software:",
         styles['Body']
     ))
 
@@ -1122,7 +1123,7 @@ def build_content():
         ['Problem', 'Solution'],
         ['No spots appearing from WSJT-X',
          'Verify the UDP port in WSJT-X Settings > Reporting matches the port configured '
-         'in FT8ClusterAggregator. Ensure WSJT-X is set to broadcast to 127.0.0.1 (or your '
+         'in DXClusterAggregator. Ensure WSJT-X is set to broadcast to 127.0.0.1 (or your '
          'Mac\'s IP). Check that the source is enabled and shows "Active" status.'],
         ['DX Cluster not connecting',
          'Verify the cluster address and port are correct. Check your internet connection. '
@@ -1140,7 +1141,7 @@ def build_content():
          'is not already in use by another application.'],
         ['Port already in use',
          'Another application is using the same port. Either close that application or '
-         'change the port in FT8ClusterAggregator to an unused port number.'],
+         'change the port in DXClusterAggregator to an unused port number.'],
         ['Spots from cluster but no frequency',
          'DX Cluster spots include frequency information from the cluster server. '
          'This is normal - the frequency comes from the spotter, not from your radio.'],
@@ -1162,7 +1163,7 @@ def build_content():
     elements.append(Paragraph("<b>Original Windows Application</b>", styles['Credits']))
     elements.append(Spacer(1, 4 * mm))
     elements.append(Paragraph(
-        "The original FT8ClusterAggregator was developed as a Windows .NET application by "
+        "The original DXClusterAggregator was developed as a Windows .NET application by "
         "<b>Vinod, VU3ESV / LB9KJ</b>. His vision of aggregating FT8 spots from multiple "
         "sources into a unified DX cluster feed laid the foundation for this project.",
         styles['Body']
@@ -1175,7 +1176,7 @@ def build_content():
     elements.append(Paragraph("<b>macOS Version</b>", styles['Credits']))
     elements.append(Spacer(1, 4 * mm))
     elements.append(Paragraph(
-        "The macOS version of FT8ClusterAggregator was conceptualised by "
+        "The macOS version of DXClusterAggregator was conceptualised by "
         "<b>Manoj, VU2CPL</b>. This native Swift/SwiftUI port brings the functionality "
         "of the original Windows application to the Mac platform, with enhancements including "
         "multiple UDP source support, DX Cluster telnet node integration, and a modern macOS "
@@ -1236,10 +1237,10 @@ def main():
         rightMargin=20 * mm,
         topMargin=22 * mm,
         bottomMargin=20 * mm,
-        title="FT8ClusterAggregator User Manual",
+        title="DXClusterAggregator User Manual",
         author="Manoj VU2CPL",
-        subject="User Manual for FT8ClusterAggregator macOS Application",
-        creator="FT8ClusterAggregator",
+        subject="User Manual for DXClusterAggregator macOS Application",
+        creator="DXClusterAggregator",
     )
 
     elements = []

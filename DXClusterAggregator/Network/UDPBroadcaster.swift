@@ -4,7 +4,7 @@ import Network
 class UDPBroadcaster {
     private var connection1: NWConnection?
     private var connection2: NWConnection?
-    private let queue = DispatchQueue(label: "com.ft8cluster.udpbroadcast")
+    private let queue = DispatchQueue(label: "com.dxcluster.udpbroadcast")
 
     func configure(ip1: String, port1: UInt16, ip2: String, port2: UInt16) {
         stop()

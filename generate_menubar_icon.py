@@ -56,7 +56,7 @@ def create_menubar_icon(size=44):
 
 
 def main():
-    base = "/Users/manoj/Documents/Claude/code/FT8ClusterAggregator/FT8ClusterAggregator/Resources"
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DXClusterAggregator", "Resources")
     os.makedirs(base, exist_ok=True)
 
     # 1x (22pt), 2x (44pt), 3x (66pt) for high-DPI

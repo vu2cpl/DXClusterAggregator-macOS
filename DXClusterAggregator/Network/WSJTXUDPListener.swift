@@ -17,7 +17,7 @@ class WSJTXUDPListener: ObservableObject {
     init(name: String = "WSJT-X", sourceId: UUID = UUID()) {
         self.name = name
         self.sourceId = sourceId
-        self.queue = DispatchQueue(label: "com.ft8cluster.udplistener.\(sourceId.uuidString.prefix(8))")
+        self.queue = DispatchQueue(label: "com.dxcluster.udplistener.\(sourceId.uuidString.prefix(8))")
     }
 
     func start(port: UInt16) {

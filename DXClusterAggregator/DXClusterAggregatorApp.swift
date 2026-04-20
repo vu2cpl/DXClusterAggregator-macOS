@@ -36,7 +36,7 @@ enum WindowManager {
 }
 
 @main
-struct FT8ClusterAggregatorApp: App {
+struct DXClusterAggregatorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var settings = AppSettings()
 
@@ -61,7 +61,7 @@ struct FT8ClusterAggregatorApp: App {
 
             Divider()
 
-            Button("Quit FT8ClusterAggregator") {
+            Button("Quit DXClusterAggregator") {
                 NSApp.terminate(nil)
             }
             .keyboardShortcut("q", modifiers: [.command])
@@ -88,7 +88,7 @@ struct MenuBarLabel: View {
             Bundle.main.url(
                 forResource: "MenuBarIcon",
                 withExtension: "png",
-                subdirectory: "FT8ClusterAggregator_FT8ClusterAggregator.bundle"
+                subdirectory: "DXClusterAggregator_DXClusterAggregator.bundle"
             ),
             // Directly in main bundle (if we copied it into Resources/)
             Bundle.main.url(forResource: "MenuBarIcon", withExtension: "png"),
@@ -96,7 +96,7 @@ struct MenuBarLabel: View {
             {
                 let exe = Bundle.main.executableURL?.deletingLastPathComponent()
                 return exe?.appendingPathComponent(
-                    "FT8ClusterAggregator_FT8ClusterAggregator.bundle/MenuBarIcon.png"
+                    "DXClusterAggregator_DXClusterAggregator.bundle/MenuBarIcon.png"
                 )
             }()
         ]

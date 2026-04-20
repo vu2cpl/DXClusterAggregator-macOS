@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a vibrant, colorful radio/network app icon for FT8ClusterAggregator."""
+"""Generate a vibrant, colorful radio/network app icon for DXClusterAggregator."""
 
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import math
@@ -264,7 +264,7 @@ def create_iconset(img, iconset_dir):
 
 
 if __name__ == "__main__":
-    base_dir = "/Users/manoj/Documents/Claude/code/FT8ClusterAggregator"
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     iconset_dir = os.path.join(base_dir, "AppIcon.iconset")
 
     print("Generating colorful icon...")

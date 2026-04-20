@@ -8,7 +8,7 @@ struct ContentView: View {
     @State private var udpListeners: [UUID: WSJTXUDPListener] = [:]
     @State private var dxClusterClients: [UUID: DXClusterClient] = [:]
     @State private var udpBroadcaster = UDPBroadcaster()
-    @State private var spots: [FT8SpotMessage] = []
+    @State private var spots: [SpotMessage] = []
     @State private var isMonitoring = false
 
     // Collapsible state for the configuration sections (settings panel)
@@ -57,7 +57,7 @@ struct ContentView: View {
 
     private var headerSection: some View {
         HStack {
-            Text("FT8 Cluster Aggregator")
+            Text("DX Cluster Aggregator")
                 .font(.title2)
                 .fontWeight(.bold)
 
@@ -71,7 +71,7 @@ struct ContentView: View {
             }
             .help("Collapse the settings panel for more space")
 
-            Text("v1.5.0 (macOS)")
+            Text("v1.6.0 (macOS)")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -508,7 +508,7 @@ struct ContentView: View {
 
     private func sendTestNotification() {
         let cfg = settings.notifications
-        let title = "FT8ClusterAggregator Test"
+        let title = "DXClusterAggregator Test"
         let body = "Notifications wired up. Cooldown \(cfg.cooldownMinutes) min."
 
         if cfg.systemEnabled {
@@ -807,7 +807,7 @@ struct ContentView: View {
         let dialFreq = udpListeners[sourceId]?.dialFrequency ?? 0
         let sourceName = udpListeners[sourceId]?.name ?? "Unknown"
 
-        var spot = FT8SpotMessage(
+        var spot = SpotMessage(
             time: Self.timeFromMilliseconds(decode.time),
             snr: decode.snr,
             deltaTime: decode.deltaTime,
@@ -839,7 +839,7 @@ struct ContentView: View {
     /// If the spot's alert level is one the user wants notified, push to Telegram and/or
     /// macOS Notification Center, respecting per-callsign cooldown.
     @MainActor
-    private func maybeNotify(_ spot: FT8SpotMessage) {
+    private func maybeNotify(_ spot: SpotMessage) {
         let cfg = settings.notifications
 
         // Quick exit if nothing is enabled
@@ -912,19 +912,19 @@ struct ContentView: View {
         }
     }
 
-    private func shouldShow(_ spot: FT8SpotMessage) -> Bool {
+    private func shouldShow(_ spot: SpotMessage) -> Bool {
         if settings.cqOnly && !spot.isCQ { return false }
         if settings.newOnly && !isNewAlert(spot.alertLevel) { return false }
         return true
     }
 
-    private var displayedSpots: [FT8SpotMessage] {
+    private var displayedSpots: [SpotMessage] {
         spots.filter { shouldShow($0) }
     }
 
     @MainActor
     private func handleClusterSpot(_ clusterSpot: DXClusterClient.ClusterSpot) {
-        // Convert cluster spot to FT8SpotMessage for unified display
+        // Convert cluster spot to SpotMessage for unified display
         let freqHz = UInt64(clusterSpot.frequencyKHz * 1000.0)
 
         // Extract SNR from comment if present (e.g., "FT8 -15 dB")
@@ -944,7 +944,7 @@ struct ContentView: View {
             }
         }
 
-        var spot = FT8SpotMessage(
+        var spot = SpotMessage(
             time: Date(),
             snr: snr,
             deltaTime: 0,
@@ -969,7 +969,7 @@ struct ContentView: View {
     }
 
     @MainActor
-    private func classifySpot(_ spot: inout FT8SpotMessage) {
+    private func classifySpot(_ spot: inout SpotMessage) {
         let classifier = AlertClassifier(
             matrix: clubLogClient.matrix,
             resolver: clubLogClient.resolver,

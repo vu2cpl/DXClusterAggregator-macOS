@@ -19,7 +19,7 @@ class ClubLogClient: ObservableObject {
     private var appSupportDir: URL {
         let fm = FileManager.default
         let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dir = base.appendingPathComponent("FT8ClusterAggregator", isDirectory: true)
+        let dir = base.appendingPathComponent("DXClusterAggregator", isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
             try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }

@@ -36,7 +36,7 @@ class DXClusterClient: ObservableObject {
     init(name: String, sourceId: UUID) {
         self.name = name
         self.sourceId = sourceId
-        self.queue = DispatchQueue(label: "com.ft8cluster.dxcluster.\(sourceId.uuidString.prefix(8))")
+        self.queue = DispatchQueue(label: "com.dxcluster.dxcluster.\(sourceId.uuidString.prefix(8))")
     }
 
     func connect(address: String, port: UInt16, username: String, password: String) {

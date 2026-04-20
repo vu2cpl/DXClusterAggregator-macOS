@@ -1,6 +1,6 @@
 import Foundation
 
-struct FT8SpotMessage: Identifiable {
+struct SpotMessage: Identifiable {
     let id = UUID()
     let time: Date
     let snr: Int32
