@@ -63,12 +63,18 @@ struct ContentView: View {
     private let autoClearTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     /// Drop spots older than the user's configured retention window.
-    /// No-op when autoClearMinutes is 0.
+    /// No-op when autoClearMinutes is 0. Pruned spots are appended to the
+    /// on-disk log file before being removed from memory.
     private func pruneOldSpots() {
         let minutes = settings.autoClearMinutes
         guard minutes > 0 else { return }
         let cutoff = Date().addingTimeInterval(-Double(minutes) * 60)
-        spots.removeAll { $0.time < cutoff }
+
+        let toRemove = spots.filter { $0.time < cutoff }
+        if !toRemove.isEmpty {
+            SpotLogger.append(toRemove)
+            spots.removeAll { $0.time < cutoff }
+        }
 
         // Also tidy the rebroadcast cache so it doesn't grow forever
         rebroadcastCache = rebroadcastCache.filter { $0.value >= cutoff }
@@ -1202,6 +1208,8 @@ struct ContentView: View {
     }
 
     private func clearSpots() {
+        // Persist the current list before wiping so spot history is preserved.
+        SpotLogger.append(spots)
         spots.removeAll()
     }
 
