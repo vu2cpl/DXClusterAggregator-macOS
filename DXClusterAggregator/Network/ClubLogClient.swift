@@ -139,6 +139,14 @@ class ClubLogClient: ObservableObject {
                 }
 
                 if let d = dxcc {
+                    // Skip QSOs whose DXCC is not a real, currently-recognised
+                    // entity. This filters out:
+                    //   - adif <= 0  (ClubLog's 'invalid operation' tag)
+                    //   - deleted / unknown adif codes (e.g. 997) that the
+                    //     current cty.xml doesn't have an entity record for
+                    // Otherwise these would inflate the matrix's DXCC count.
+                    guard d > 0, resolver.entity(for: d) != nil else { continue }
+
                     // Collapse FT8/FT4/JT*/RTTY/etc. → DATA; CW / PHONE separate.
                     // This matches how DXCC/LOTW/ClubLog award tracking groups modes.
                     let canonicalMode = ModeNormalizer.canonical(mode)
