@@ -630,7 +630,7 @@ struct ContentView: View {
             Toggle("New", isOn: $settings.newOnly)
                 .fixedSize()
                 .help("Show only spots matching an enabled ClubLog alert (new DXCC/slot/band/mode)")
-            Toggle("Hide dupes", isOn: $settings.hideDuplicates)
+            Toggle("Hide Dupes", isOn: $settings.hideDuplicates)
                 .fixedSize()
                 .help("Collapse repeat spots of the same call/band/mode within a 60-second window")
 
@@ -642,13 +642,13 @@ struct ContentView: View {
 
             // Auto-clear: prune spots older than N minutes (0 = off)
             HStack(spacing: 4) {
-                Text("Auto clear").font(.caption).fixedSize()
+                Text("Auto Clear").fixedSize()
                 TextField("60", text: settings.autoClearMinutesString)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 44)
                 Stepper("", value: $settings.autoClearMinutes, in: 0...120, step: 5)
                     .labelsHidden()
-                Text("min").font(.caption).foregroundColor(.secondary).fixedSize()
+                Text("min").foregroundColor(.secondary).fixedSize()
             }
             .help("Automatically delete spots older than this many minutes. Set to 0 to disable.")
 
