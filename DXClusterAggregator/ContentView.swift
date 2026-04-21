@@ -625,14 +625,17 @@ struct ContentView: View {
     private var controlSection: some View {
         HStack {
             Toggle("New", isOn: $settings.newOnly)
+                .fixedSize()
                 .help("Show only spots matching an enabled ClubLog alert (new DXCC/slot/band/mode)")
             Toggle("Hide dupes", isOn: $settings.hideDuplicates)
+                .fixedSize()
                 .help("Collapse repeat spots of the same call/band/mode within a 60-second window")
 
             sourceFilterMenu
             bandFilterMenu
 
             Toggle("Hide on Start", isOn: $settings.minimizeOnStart)
+                .fixedSize()
                 .help("When monitoring starts, hide the main window. Use the menu bar antenna icon to show it again.")
 
             Spacer()
