@@ -633,7 +633,7 @@ struct ContentView: View {
 
             // Auto-clear: prune spots older than N minutes (0 = off)
             HStack(spacing: 4) {
-                Text("Auto-clear:").font(.caption)
+                Text("Auto clear").font(.caption)
                 TextField("60", text: settings.autoClearMinutesString)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 44)
