@@ -72,4 +72,10 @@ struct SpotMessage: Identifiable {
         formatter.timeZone = TimeZone(identifier: "UTC")
         return formatter.string(from: time)
     }
+
+    // MARK: - Sortable keys (non-optional, Comparable) for the Table
+
+    var sortCallsign: String { dxCallsign ?? "" }
+    var sortDXCC: String { dxccName ?? "" }
+    var sortBand: String { bandName ?? "" }
 }

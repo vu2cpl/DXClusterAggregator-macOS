@@ -22,6 +22,11 @@ struct ContentView: View {
     @State private var rebroadcastCache: [String: Date] = [:]
     private let rebroadcastDedupeWindow: TimeInterval = 60  // seconds
 
+    // Spots-table sort order (newest first by default)
+    @State private var spotsSortOrder: [KeyPathComparator<SpotMessage>] = [
+        KeyPathComparator(\SpotMessage.time, order: .reverse)
+    ]
+
     var body: some View {
         VStack(spacing: 12) {
             headerSection
@@ -682,26 +687,27 @@ struct ContentView: View {
     private var spotsTable: some View {
         // Native macOS Table — header and rows share the same column layout, and
         // each column has a draggable resize handle. The user can drag the
-        // dividers between any two column headers to resize.
-        let visible = displayedSpots
-        return Table(visible) {
-            TableColumn("") { spot in
+        // dividers between column headers to resize, and click any header to
+        // sort by that column.
+        let visible = displayedSpots.sorted(using: spotsSortOrder)
+        return Table(visible, sortOrder: $spotsSortOrder) {
+            TableColumn("") { (spot: SpotMessage) in
                 Text(spot.isBeacon ? "🔔" : alertIcon(spot.alertLevel))
             }
             .width(min: 20, ideal: 24, max: 32)
 
-            TableColumn("Time") { spot in
+            TableColumn("Time", value: \SpotMessage.time) { spot in
                 Text(spot.timeString)
                     .font(.system(.caption, design: .monospaced))
             }
             .width(min: 40, ideal: 55, max: 80)
 
-            TableColumn("Source") { spot in
+            TableColumn("Source", value: \SpotMessage.sourceName) { spot in
                 Text(spot.sourceName).foregroundColor(.secondary)
             }
             .width(min: 50, ideal: 70, max: 140)
 
-            TableColumn("Callsign") { spot in
+            TableColumn("Callsign", value: \SpotMessage.sortCallsign) { spot in
                 Text(spot.dxCallsign ?? "-")
                     .font(.system(.caption, design: .monospaced))
                     .foregroundColor(alertTextColor(spot.alertLevel))
@@ -709,36 +715,36 @@ struct ContentView: View {
             }
             .width(min: 70, ideal: 90, max: 160)
 
-            TableColumn("DXCC") { spot in
+            TableColumn("DXCC", value: \SpotMessage.sortDXCC) { spot in
                 Text(spot.dxccName ?? "")
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
             .width(min: 80, ideal: 130, max: 280)
 
-            TableColumn("Freq (MHz)") { spot in
+            TableColumn("Freq (MHz)", value: \SpotMessage.frequencyMHz) { spot in
                 Text(String(format: "%.3f", spot.frequencyMHz))
                     .font(.system(.caption, design: .monospaced))
             }
             .width(min: 60, ideal: 85, max: 110)
 
-            TableColumn("Band") { spot in
+            TableColumn("Band", value: \SpotMessage.sortBand) { spot in
                 Text(spot.bandName ?? "").foregroundColor(.secondary)
             }
             .width(min: 35, ideal: 50, max: 70)
 
-            TableColumn("SNR") { spot in
+            TableColumn("SNR", value: \SpotMessage.snr) { spot in
                 Text("\(spot.snr)")
                     .font(.system(.caption, design: .monospaced))
             }
             .width(min: 30, ideal: 40, max: 60)
 
-            TableColumn("Mode") { spot in
+            TableColumn("Mode", value: \SpotMessage.mode) { spot in
                 Text(spot.mode)
             }
             .width(min: 40, ideal: 55, max: 80)
 
-            TableColumn("Message") { spot in
+            TableColumn("Message", value: \SpotMessage.message) { spot in
                 Text(spot.displayMessage)
                     .foregroundColor(spot.isBeacon ? .secondary : .primary)
                     .lineLimit(1)
