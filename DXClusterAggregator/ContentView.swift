@@ -653,11 +653,11 @@ struct ContentView: View {
             .help("Automatically delete spots older than this many minutes. Set to 0 to disable.")
 
             Button(action: clearSpots) {
-                Label("Clear Spots", systemImage: "trash")
+                Label("Clear", systemImage: "trash")
             }
 
             Button(action: toggleMonitoring) {
-                Label(isMonitoring ? "Stop Monitoring" : "Start Monitoring",
+                Label(isMonitoring ? "Stop" : "Start",
                       systemImage: isMonitoring ? "stop.circle.fill" : "play.circle.fill")
             }
             .buttonStyle(.borderedProminent)
