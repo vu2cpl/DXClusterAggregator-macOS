@@ -56,6 +56,23 @@ struct ContentView: View {
                 SystemNotifier.requestAuthorizationIfNeeded()
             }
         }
+        // Periodic prune for auto-clear (fires every 30s when enabled)
+        .onReceive(autoClearTimer) { _ in pruneOldSpots() }
+    }
+
+    private let autoClearTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
+
+    /// Drop spots older than the user's configured retention window.
+    /// No-op when autoClearMinutes is 0.
+    private func pruneOldSpots() {
+        let minutes = settings.autoClearMinutes
+        guard minutes > 0 else { return }
+        let cutoff = Date().addingTimeInterval(-Double(minutes) * 60)
+        spots.removeAll { $0.time < cutoff }
+
+        // Also tidy the rebroadcast cache so it doesn't grow forever
+        rebroadcastCache = rebroadcastCache.filter { $0.value >= cutoff }
+        notificationCooldown = notificationCooldown.filter { $0.value >= cutoff }
     }
 
     // MARK: - Header
@@ -613,6 +630,20 @@ struct ContentView: View {
                 .help("When monitoring starts, hide the main window. Use the menu bar antenna icon to show it again.")
 
             Spacer()
+
+            // Auto-clear: prune spots older than N minutes (0 = off)
+            HStack(spacing: 4) {
+                Text("Auto-clear:").font(.caption)
+                TextField("60", text: settings.autoClearMinutesString)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 44)
+                Stepper("", value: $settings.autoClearMinutes, in: 0...120, step: 5)
+                    .labelsHidden()
+                Text("min")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .help("Automatically delete spots older than this many minutes. Set to 0 to disable.")
 
             Button(action: clearSpots) {
                 Label("Clear Spots", systemImage: "trash")

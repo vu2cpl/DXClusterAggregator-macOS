@@ -35,6 +35,20 @@ class AppSettings: ObservableObject {
     @AppStorage("hideDuplicates") var hideDuplicates: Bool = true
     @AppStorage("minimizeOnStart") var minimizeOnStart: Bool = false
 
+    /// Auto-clear spots older than this many minutes (0 = disabled).
+    /// Range clamped to 0...120 by the UI.
+    @AppStorage("autoClearMinutes") var autoClearMinutes: Int = 60
+
+    var autoClearMinutesString: Binding<String> {
+        Binding<String>(
+            get: { String(self.autoClearMinutes) },
+            set: {
+                let v = Int($0) ?? self.autoClearMinutes
+                self.autoClearMinutes = max(0, min(120, v))
+            }
+        )
+    }
+
     @Published var udpSources: [UDPSource] {
         didSet { saveCodable(udpSources, key: "udpSources") }
     }
