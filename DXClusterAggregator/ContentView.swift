@@ -598,6 +598,18 @@ struct ContentView: View {
         }
     }
 
+    /// Strong foreground color for the Callsign column to make alert level
+    /// visible at a glance now that Table doesn't support row backgrounds.
+    private func alertTextColor(_ level: AlertLevel) -> Color {
+        switch level {
+        case .newDXCC: return .red
+        case .newSlot: return .orange
+        case .newBand: return .blue
+        case .newMode: return Color(red: 0.95, green: 0.65, blue: 0.0)  // amber
+        case .worked, .none: return .primary
+        }
+    }
+
     private func alertColor(_ level: AlertLevel) -> Color {
         switch level {
         case .newDXCC: return Color.red.opacity(0.40)
@@ -668,61 +680,73 @@ struct ContentView: View {
     // MARK: - Spots Table
 
     private var spotsTable: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Text("").frame(width: 20, alignment: .leading)
-                Text("Time").frame(width: 55, alignment: .leading)
-                Text("Source").frame(width: 70, alignment: .leading)
-                Text("Callsign").frame(width: 90, alignment: .leading)
-                Text("DXCC").frame(width: 110, alignment: .leading)
-                Text("Freq (MHz)").frame(width: 85, alignment: .trailing)
-                Text("Band").frame(width: 45, alignment: .leading)
-                Text("SNR").frame(width: 40, alignment: .trailing)
-                Text("Mode").frame(width: 50, alignment: .leading)
-                Text("Message").frame(minWidth: 150, alignment: .leading)
+        // Native macOS Table — header and rows share the same column layout, and
+        // each column has a draggable resize handle. The user can drag the
+        // dividers between any two column headers to resize.
+        let visible = displayedSpots
+        return Table(visible) {
+            TableColumn("") { spot in
+                Text(spot.isBeacon ? "🔔" : alertIcon(spot.alertLevel))
             }
-            .font(.caption.bold())
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.secondary.opacity(0.15))
+            .width(min: 20, ideal: 24, max: 32)
 
-            Divider()
-
-            ScrollViewReader { proxy in
-                let visible = displayedSpots
-                List(visible) { spot in
-                    HStack(spacing: 8) {
-                        Text(spot.isBeacon ? "🔔" : alertIcon(spot.alertLevel))
-                            .frame(width: 20, alignment: .leading)
-                        Text(spot.timeString).frame(width: 55, alignment: .leading)
-                        Text(spot.sourceName).frame(width: 70, alignment: .leading)
-                            .foregroundColor(.secondary)
-                        Text(spot.dxCallsign ?? "-").frame(width: 90, alignment: .leading)
-                            .bold(spot.alertLevel == .newDXCC || spot.alertLevel == .newSlot)
-                        Text(spot.dxccName ?? "").frame(width: 110, alignment: .leading)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                        Text(String(format: "%.3f", spot.frequencyMHz)).frame(width: 85, alignment: .trailing)
-                        Text(spot.bandName ?? "").frame(width: 45, alignment: .leading)
-                            .foregroundColor(.secondary)
-                        Text("\(spot.snr)").frame(width: 40, alignment: .trailing)
-                        Text(spot.mode).frame(width: 50, alignment: .leading)
-                        Text(spot.displayMessage).frame(minWidth: 150, alignment: .leading)
-                            .foregroundColor(spot.isBeacon ? .secondary : .primary)
-                    }
+            TableColumn("Time") { spot in
+                Text(spot.timeString)
                     .font(.system(.caption, design: .monospaced))
-                    .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
-                    .listRowBackground(alertColor(spot.alertLevel))
-                    .id(spot.id)
-                }
-                .listStyle(.plain)
-                .onChange(of: visible.count) { _, _ in
-                    if let last = visible.last {
-                        proxy.scrollTo(last.id, anchor: .bottom)
-                    }
-                }
             }
+            .width(min: 40, ideal: 55, max: 80)
+
+            TableColumn("Source") { spot in
+                Text(spot.sourceName).foregroundColor(.secondary)
+            }
+            .width(min: 50, ideal: 70, max: 140)
+
+            TableColumn("Callsign") { spot in
+                Text(spot.dxCallsign ?? "-")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(alertTextColor(spot.alertLevel))
+                    .bold(spot.alertLevel != .none && spot.alertLevel != .worked)
+            }
+            .width(min: 70, ideal: 90, max: 160)
+
+            TableColumn("DXCC") { spot in
+                Text(spot.dxccName ?? "")
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            .width(min: 80, ideal: 130, max: 280)
+
+            TableColumn("Freq (MHz)") { spot in
+                Text(String(format: "%.3f", spot.frequencyMHz))
+                    .font(.system(.caption, design: .monospaced))
+            }
+            .width(min: 60, ideal: 85, max: 110)
+
+            TableColumn("Band") { spot in
+                Text(spot.bandName ?? "").foregroundColor(.secondary)
+            }
+            .width(min: 35, ideal: 50, max: 70)
+
+            TableColumn("SNR") { spot in
+                Text("\(spot.snr)")
+                    .font(.system(.caption, design: .monospaced))
+            }
+            .width(min: 30, ideal: 40, max: 60)
+
+            TableColumn("Mode") { spot in
+                Text(spot.mode)
+            }
+            .width(min: 40, ideal: 55, max: 80)
+
+            TableColumn("Message") { spot in
+                Text(spot.displayMessage)
+                    .foregroundColor(spot.isBeacon ? .secondary : .primary)
+                    .lineLimit(1)
+            }
+            .width(min: 120, ideal: 250)
         }
+        .tableStyle(.inset(alternatesRowBackgrounds: false))
+        .font(.system(.caption))
         .frame(minHeight: 200)
         .background(Color(nsColor: .textBackgroundColor))
         .cornerRadius(6)
