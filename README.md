@@ -5,12 +5,20 @@ A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JT
 ## Features
 
 - **Multiple UDP Sources** — Connect to several WSJT-X/JTDX instances simultaneously
-- **DX Cluster Nodes** — Connect to telnet DX cluster servers with auto-authentication
-- **ClubLog Integration** — Download your log and highlight spots for new DXCC / new slot / new band / new mode (configurable)
-- **Built-in Telnet Cluster Server** — Feed aggregated spots to Logger32, N1MM+, Log4OM, or any logging software
+- **DX Cluster Nodes** — Telnet DX cluster servers with auto-authentication and **auto-reconnect** (10s → 30s → 60s → 120s → 5 min backoff)
+- **ClubLog Integration** — Download your log and highlight spots for **New DXCC / New Slot / New Band / New Mode** (configurable)
+- **LoTW User Marker** — Green dot after callsigns of known LoTW uploaders (downloaded from ARRL directly)
+- **Beacon Detection** — NCDXF/IBP + national beacon database; `/B` `/BCN` suffix handling; no false alerts
+- **Digital modes grouped as DATA** — FT8/FT4/RTTY/JT65/PSK/MSK144 etc. share one DXCC slot, matching award rules
+- **Built-in Telnet Cluster Server** — Feed aggregated spots to Logger32, N1MM+, Log4OM, DXKeeper, etc.
 - **Dual UDP Broadcast** — Forward spots to two UDP destinations
-- **CQ-Only Filter** — Filter to show only CQ calls
-- **Persistent Settings** — All configuration saved automatically
+- **Telegram + macOS Notifications** — Per-callsign cooldown, selectable alert levels
+- **Sortable / resizable spots table** — click any column to sort, drag between headers to resize
+- **Live filters** — Sources dropdown, Bands dropdown, New Only, Hide Duplicates (60s window)
+- **Auto Start on Launch + Hide on Start** — runs as a menu-bar background service
+- **Auto-clear with disk log** — prune old spots (0-120 min); pruned spots are appended to `DXC Spots.txt`
+- **Universal binary** — native on both Apple Silicon and Intel Macs
+- **Persistent settings** — all configuration saved automatically (backward-compatible Codable)
 
 ## Requirements
 

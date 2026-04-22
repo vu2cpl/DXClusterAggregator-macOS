@@ -231,7 +231,7 @@ def build_cover():
     elements.append(Spacer(1, 8 * mm))
     elements.append(Paragraph("User Manual", styles['CoverSubtitle']))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(Paragraph("Version 1.6.0", styles['CoverVersion']))
+    elements.append(Paragraph("Version 1.7.0", styles['CoverVersion']))
     elements.append(Spacer(1, 30 * mm))
 
     elements.append(Paragraph("Aggregate FT8/FT4 spots from multiple WSJT-X/JTDX instances", styles['Credits']))
@@ -296,7 +296,8 @@ def build_toc():
         ("", "10.4  Notify-On Selection"),
         ("11.", "Connecting Logging Software"),
         ("12.", "Troubleshooting"),
-        ("13.", "Credits & Acknowledgements"),
+        ("13.", "What's New in 1.7.0"),
+        ("14.", "Credits & Acknowledgements"),
     ]
 
     for num, title in toc_items:
@@ -1155,7 +1156,125 @@ def build_content():
 
     # Chapter 11: Credits
     elements.append(PageBreak())
-    elements.append(Paragraph("13. Credits & Acknowledgements", styles['ChapterTitle']))
+    # Chapter 13: What's New in 1.7.0
+    elements.append(PageBreak())
+    elements.append(Paragraph("13. What's New in 1.7.0", styles['ChapterTitle']))
+    elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
+
+    elements.append(Paragraph("LoTW User Marker", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "A new green dot appears after callsigns in the Callsign column for stations known "
+        "to use ARRL Logbook of The World. The LoTW user list is downloaded from ARRL "
+        "(default URL https://lotw.arrl.org/lotw-user-activity.csv) via the <b>Refresh "
+        "LoTW users</b> button in the ClubLog section. The list is cached locally and reused "
+        "across app launches. Toggle <b>Mark LoTW users</b> to show or hide the marker "
+        "without losing the database.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("Beacon Detection", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "Known beacons (all 18 NCDXF/IBP rotating beacons plus common national beacons) "
+        "are labelled in the DXCC column with their location and network, and marked with "
+        "a 🔔 icon at the left of the row instead of an alert colour. Callsigns carrying a "
+        "<b>/B</b> or <b>/BCN</b> suffix are also treated as beacons even when not in the "
+        "explicit database. Beacons never trigger alerts or notifications.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("Digital Modes Grouped as DATA", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "FT8, FT4, RTTY, JT65, JT9, MSK144, PSK and every other digital mode now share one "
+        "'DATA' slot for DXCC tracking purposes - matching how DXCC / LOTW / ClubLog awards "
+        "count them. CW and voice modes (SSB / AM / FM / DIGITALVOICE etc.) remain separate. "
+        "An FT4 spot no longer triggers a 'new mode' alert just because your log only has "
+        "FT8 for that entity.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("Time-Bounded ClubLog Rules", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "The ClubLog cty.xml contains historical prefix rules with &lt;start&gt; and &lt;end&gt; dates "
+        "(e.g. the KARELO-FINN REPUBLIC prefix ended 1960-06-30). Those are now filtered by "
+        "the current date, so modern Russian calls like RN1TV correctly resolve to EUROPEAN "
+        "RUSSIA instead of the deleted entity.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("Auto Start on Launch", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "New <b>Auto Start</b> toggle in the controls row. When enabled, monitoring kicks "
+        "off automatically shortly after the app launches. Combined with <b>Hide on Start</b> "
+        "this effectively runs the aggregator as a menu-bar background service from the "
+        "moment you log in.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("DX Cluster Auto-Reconnect", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "When a DX cluster connection drops (network blip, remote server restart, etc.) the "
+        "client now retries automatically with capped exponential backoff: 10s, 30s, 60s, "
+        "120s, then 5 minutes repeating. The Status column shows 'Reconnect in Xs (try N)' "
+        "during the wait. A successful reconnect resets the counter. Clicking Stop Monitoring, "
+        "disabling the source, or removing it stops the retry loop.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("Auto-Clear + Spot Log File", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "The controls row has an <b>Auto Clear</b> field (0-120 minutes, default 60). A "
+        "background timer prunes spots older than the cutoff. Before deletion the pruned "
+        "spots are appended to ~/Library/Application Support/DXClusterAggregator/DXC Spots.txt "
+        "(tab-separated with a header). The manual <b>Clear</b> button also writes to the same "
+        "file. Setting auto-clear to 0 disables the prune.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("Hide Duplicates Filter", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "New toggle next to CQ Only / New Only. When enabled, repeat spots of the same "
+        "call / band / mode within a 60-second window are collapsed to a single row. Toggle "
+        "off to see every decode.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("Sortable + Resizable Spots Table", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "The spots list is now a native macOS Table: drag between column headers to resize "
+        "any column, and click a header to sort by it (click again to toggle ascending/"
+        "descending). Default order is Time, newest first.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("Band + Source Display Filters", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "Two new dropdown menus in the controls row: <b>Sources</b> (pick which UDP and DX "
+        "Cluster sources to display) and <b>Bands</b> (pick which bands to watch). Both are "
+        "multi-select with All / preset / individual options. Independent from the ClubLog "
+        "Import Bands setting - import all bands to the matrix, then narrow the live feed "
+        "to whatever you're actively watching. Notifications also honour these filters.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("Universal Binary", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "The shipped .app is now a universal binary (arm64 + x86_64), running natively on "
+        "both Apple Silicon and Intel Macs.",
+        styles['Body']
+    ))
+
+    elements.append(Paragraph("13.x Earlier Releases", styles['SubSection']))
+    elements.append(Paragraph(
+        "Versions 1.0-1.6 added the WSJT-X UDP listener, DX cluster telnet client, built-in "
+        "telnet cluster server, dual UDP broadcast, ClubLog integration with alert classification, "
+        "Telegram and macOS notifications with per-callsign cooldown, and the project rename "
+        "from FT8ClusterAggregator to DXClusterAggregator.",
+        styles['Body']
+    ))
+
+    # Chapter 14: Credits
+    elements.append(PageBreak())
+    elements.append(Paragraph("14. Credits & Acknowledgements", styles['ChapterTitle']))
     elements.append(HRFlowable(width="100%", thickness=1, color=CYAN, spaceBefore=2, spaceAfter=10))
 
     elements.append(Spacer(1, 10 * mm))
