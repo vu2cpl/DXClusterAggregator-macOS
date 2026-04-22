@@ -32,6 +32,46 @@ struct ClubLogConfig: Codable, Equatable {
     var lotwUsersURL: String = "https://lotw.arrl.org/lotw-user-activity.csv"
     /// Mark LoTW users in the Callsign column with a trailing dot.
     var markLoTWUsers: Bool = true
+
+    // MARK: - Backward-compatible Codable
+    //
+    // Swift's auto-synthesized init(from:) throws if a key is missing from
+    // the JSON, which means adding a new non-optional field to this struct
+    // would cause the decoder to fail on older UserDefaults data and the
+    // entire configuration would reset to defaults (wiping callsign, email,
+    // passwords, etc.). To prevent that, we decode every field via
+    // decodeIfPresent and fall back to the property's default value when
+    // the key isn't present.
+
+    private enum CodingKeys: String, CodingKey {
+        case callsign, email, appPassword, apiKey, autoRefreshOnStart,
+             refreshIntervalHours, alertNewDXCC, alertNewSlot, alertNewBand,
+             alertNewMode, alertUnconfirmed, importBands, lastRefresh,
+             qsoCount, lotwUsersURL, markLoTWUsers
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.callsign            = (try? c.decodeIfPresent(String.self, forKey: .callsign)) ?? ""
+        self.email               = (try? c.decodeIfPresent(String.self, forKey: .email)) ?? ""
+        self.appPassword         = (try? c.decodeIfPresent(String.self, forKey: .appPassword)) ?? ""
+        self.apiKey              = (try? c.decodeIfPresent(String.self, forKey: .apiKey)) ?? ""
+        self.autoRefreshOnStart  = (try? c.decodeIfPresent(Bool.self, forKey: .autoRefreshOnStart)) ?? false
+        self.refreshIntervalHours = (try? c.decodeIfPresent(Int.self, forKey: .refreshIntervalHours)) ?? 0
+        self.alertNewDXCC        = (try? c.decodeIfPresent(Bool.self, forKey: .alertNewDXCC)) ?? true
+        self.alertNewSlot        = (try? c.decodeIfPresent(Bool.self, forKey: .alertNewSlot)) ?? true
+        self.alertNewBand        = (try? c.decodeIfPresent(Bool.self, forKey: .alertNewBand)) ?? false
+        self.alertNewMode        = (try? c.decodeIfPresent(Bool.self, forKey: .alertNewMode)) ?? false
+        self.alertUnconfirmed    = (try? c.decodeIfPresent(Bool.self, forKey: .alertUnconfirmed)) ?? false
+        self.importBands         = (try? c.decodeIfPresent(Set<String>.self, forKey: .importBands)) ?? []
+        self.lastRefresh         = try? c.decodeIfPresent(Date.self, forKey: .lastRefresh)
+        self.qsoCount            = (try? c.decodeIfPresent(Int.self, forKey: .qsoCount)) ?? 0
+        self.lotwUsersURL        = (try? c.decodeIfPresent(String.self, forKey: .lotwUsersURL))
+            ?? "https://lotw.arrl.org/lotw-user-activity.csv"
+        self.markLoTWUsers       = (try? c.decodeIfPresent(Bool.self, forKey: .markLoTWUsers)) ?? true
+    }
 }
 
 enum AlertLevel: String, Codable {
