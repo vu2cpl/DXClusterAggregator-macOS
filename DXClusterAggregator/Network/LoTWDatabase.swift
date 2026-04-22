@@ -76,35 +76,56 @@ final class LoTWDatabase: ObservableObject {
 
     // MARK: - Refresh
 
-    /// Download the LoTW users list from the given URL.
-    /// Default is the widely-used HB9BZA list.
+    /// Load the LoTW users list from the given URL. Supports http://, https://,
+    /// and file:// schemes. A plain filesystem path also works (it's treated as
+    /// a file:// URL).
     func refresh(url urlString: String) async {
-        guard let url = URL(string: urlString) else {
-            statusMessage = "Invalid LoTW URL"
+        let trimmed = urlString.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            statusMessage = "LoTW URL is empty"
+            return
+        }
+
+        // Allow the user to paste a local filesystem path directly.
+        let resolved: URL? = {
+            if trimmed.hasPrefix("/") || trimmed.hasPrefix("~") {
+                let expanded = (trimmed as NSString).expandingTildeInPath
+                return URL(fileURLWithPath: expanded)
+            }
+            return URL(string: trimmed)
+        }()
+        guard let url = resolved else {
+            statusMessage = "Invalid LoTW URL / path"
             return
         }
 
         isRefreshing = true
         defer { isRefreshing = false }
-        statusMessage = "Downloading LoTW users..."
 
         do {
-            var req = URLRequest(url: url)
-            req.timeoutInterval = 120
-            req.setValue("DXClusterAggregator/1.0", forHTTPHeaderField: "User-Agent")
+            let data: Data
+            if url.isFileURL {
+                statusMessage = "Loading LoTW file..."
+                data = try Data(contentsOf: url)
+            } else {
+                statusMessage = "Downloading LoTW users..."
+                var req = URLRequest(url: url)
+                req.timeoutInterval = 120
+                req.setValue("DXClusterAggregator/1.0", forHTTPHeaderField: "User-Agent")
 
-            let (data, response) = try await URLSession.shared.data(for: req)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-                let code = (response as? HTTPURLResponse)?.statusCode ?? -1
-                statusMessage = "LoTW download HTTP \(code)"
-                return
+                let (downloaded, response) = try await URLSession.shared.data(for: req)
+                if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+                    statusMessage = "LoTW HTTP \(http.statusCode)"
+                    return
+                }
+                data = downloaded
             }
 
             try data.write(to: rawPath)
 
             guard let text = String(data: data, encoding: .utf8)
                 ?? String(data: data, encoding: .isoLatin1) else {
-                statusMessage = "LoTW file not text"
+                statusMessage = "LoTW file not text-decodable"
                 return
             }
 
@@ -112,14 +133,25 @@ final class LoTWDatabase: ObservableObject {
             userCount = users.count
             lastRefresh = Date()
 
+            if userCount == 0 {
+                statusMessage = "LoTW parse: 0 users - wrong URL/format?"
+                return
+            }
+
             let meta = Meta(lastRefresh: Date(), userCount: userCount)
-            if let data = try? JSONEncoder().encode(meta) {
-                try? data.write(to: metaPath)
+            if let metaData = try? JSONEncoder().encode(meta) {
+                try? metaData.write(to: metaPath)
             }
 
             updateStatusText()
         } catch {
-            statusMessage = "LoTW download failed: \(error.localizedDescription)"
+            let ns = error as NSError
+            if ns.domain == NSURLErrorDomain, ns.code == NSURLErrorServerCertificateUntrusted ||
+                ns.code == NSURLErrorSecureConnectionFailed {
+                statusMessage = "LoTW TLS failed - try http:// URL or a local file path"
+            } else {
+                statusMessage = "LoTW failed: \(error.localizedDescription)"
+            }
         }
     }
 

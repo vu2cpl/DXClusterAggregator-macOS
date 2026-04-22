@@ -154,6 +154,8 @@ cat > DXClusterAggregator.app/Contents/Info.plist << 'EOF'
     <dict>
         <key>NSAllowsLocalNetworking</key>
         <true/>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
     </dict>
 </dict>
 </plist>

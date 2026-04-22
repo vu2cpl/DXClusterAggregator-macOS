@@ -25,9 +25,11 @@ struct ClubLogConfig: Codable, Equatable {
     var lastRefresh: Date? = nil
     var qsoCount: Int = 0
 
-    /// URL to the LoTW user-activity file (community-maintained lists of every
-    /// call that has ever uploaded to LoTW). Default is the HB9BZA-hosted list.
-    var lotwUsersURL: String = "https://www.hb9bza.net/lotw/lotw-user-activity.csv"
+    /// URL to the LoTW user-activity file (CSV of every callsign that has
+    /// ever uploaded a QSO to ARRL Logbook of The World). Default is ARRL's
+    /// own authoritative file. Local filesystem paths or file:// URLs are
+    /// also accepted if you'd rather point to a downloaded copy.
+    var lotwUsersURL: String = "https://lotw.arrl.org/lotw-user-activity.csv"
     /// Mark LoTW users in the Callsign column with a trailing dot.
     var markLoTWUsers: Bool = true
 }
