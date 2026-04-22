@@ -34,6 +34,7 @@ class AppSettings: ObservableObject {
     @AppStorage("newOnly") var newOnly: Bool = false
     @AppStorage("hideDuplicates") var hideDuplicates: Bool = true
     @AppStorage("minimizeOnStart") var minimizeOnStart: Bool = false
+    @AppStorage("autoStartOnLaunch") var autoStartOnLaunch: Bool = false
 
     /// Auto-clear spots older than this many minutes (0 = disabled).
     /// Range clamped to 0...120 by the UI.

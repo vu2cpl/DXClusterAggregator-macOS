@@ -62,6 +62,15 @@ struct ContentView: View {
             if settings.notifications.systemEnabled {
                 SystemNotifier.requestAuthorizationIfNeeded()
             }
+            // Auto-start monitoring if the user opted in. Small delay so the
+            // view is fully set up and the cached data is populated first.
+            if settings.autoStartOnLaunch && !isMonitoring {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    if !isMonitoring {
+                        startMonitoring()
+                    }
+                }
+            }
         }
         // Periodic prune for auto-clear (fires every 30s when enabled)
         .onReceive(autoClearTimer) { _ in pruneOldSpots() }
@@ -702,6 +711,10 @@ struct ContentView: View {
             Toggle("Hide Dupes", isOn: $settings.hideDuplicates)
                 .fixedSize()
                 .help("Collapse repeat spots of the same call/band/mode within a 60-second window")
+
+            Toggle("Auto Start", isOn: $settings.autoStartOnLaunch)
+                .fixedSize()
+                .help("Automatically click Start Monitoring when the app launches.")
 
             Toggle("Hide on Start", isOn: $settings.minimizeOnStart)
                 .fixedSize()

@@ -24,6 +24,14 @@ class DXClusterClient: ObservableObject {
     private var sentUsername = false
     private var sentPassword = false
 
+    // Auto-reconnect with capped exponential backoff.
+    // shouldReconnect is true while the caller expects us to stay connected;
+    // disconnect() clears it so an intentional stop doesn't retry.
+    private var shouldReconnect = false
+    private var reconnectAttempt = 0
+    private let reconnectSchedule: [TimeInterval] = [10, 30, 60, 120, 300]  // seconds; last value repeats
+    private var reconnectWorkItem: DispatchWorkItem?
+
     struct ClusterSpot {
         let spotter: String
         let dxCall: String
@@ -40,7 +48,12 @@ class DXClusterClient: ObservableObject {
     }
 
     func connect(address: String, port: UInt16, username: String, password: String) {
-        disconnect()
+        // Intentional reconnect/initial connect: stop any pending retry and
+        // cancel the previous NWConnection without clearing shouldReconnect.
+        reconnectWorkItem?.cancel()
+        reconnectWorkItem = nil
+        connection?.cancel()
+        connection = nil
 
         self.address = address
         self.port = port
@@ -50,6 +63,7 @@ class DXClusterClient: ObservableObject {
         self.sentUsername = false
         self.sentPassword = false
         self.buffer = ""
+        self.shouldReconnect = true
 
         let host = NWEndpoint.Host(address)
         let nwPort = NWEndpoint.Port(rawValue: port)!
@@ -58,21 +72,27 @@ class DXClusterClient: ObservableObject {
 
         connection?.stateUpdateHandler = { [weak self] state in
             DispatchQueue.main.async {
+                guard let self else { return }
                 switch state {
                 case .ready:
-                    self?.isConnected = true
-                    self?.statusText = "Connected"
+                    self.isConnected = true
+                    self.statusText = "Connected"
+                    // Successful connection: reset backoff so future drops
+                    // retry quickly before escalating.
+                    self.reconnectAttempt = 0
                     print("DX Cluster connected to \(address):\(port)")
-                    self?.startReceiving()
+                    self.startReceiving()
                 case .failed(let error):
-                    self?.isConnected = false
-                    self?.statusText = "Failed"
+                    self.isConnected = false
+                    self.statusText = "Failed"
                     print("DX Cluster connection failed: \(error)")
+                    self.scheduleReconnectIfNeeded()
                 case .cancelled:
-                    self?.isConnected = false
-                    self?.statusText = "Disconnected"
+                    self.isConnected = false
+                    self.statusText = "Disconnected"
+                    self.scheduleReconnectIfNeeded()
                 case .waiting(let error):
-                    self?.statusText = "Waiting..."
+                    self.statusText = "Waiting..."
                     print("DX Cluster waiting: \(error)")
                 default:
                     break
@@ -87,12 +107,44 @@ class DXClusterClient: ObservableObject {
     }
 
     func disconnect() {
+        // Caller is explicitly stopping us: don't try to reconnect.
+        shouldReconnect = false
+        reconnectWorkItem?.cancel()
+        reconnectWorkItem = nil
+        reconnectAttempt = 0
+
         connection?.cancel()
         connection = nil
         DispatchQueue.main.async {
             self.isConnected = false
             self.statusText = "Disconnected"
         }
+    }
+
+    /// If we were still supposed to be connected but lost the connection,
+    /// schedule a retry using capped exponential backoff:
+    /// 10s, 30s, 60s, 120s, 300s, 300s, ...
+    private func scheduleReconnectIfNeeded() {
+        guard shouldReconnect, reconnectWorkItem == nil else { return }
+
+        let idx = min(reconnectAttempt, reconnectSchedule.count - 1)
+        let delay = reconnectSchedule[idx]
+        reconnectAttempt += 1
+
+        statusText = "Reconnect in \(Int(delay))s (try \(reconnectAttempt))"
+
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.reconnectWorkItem = nil
+            // Re-enter connect with the saved credentials
+            guard self.shouldReconnect else { return }
+            self.connect(
+                address: self.address, port: self.port,
+                username: self.username, password: self.password
+            )
+        }
+        reconnectWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     private func startReceiving() {
