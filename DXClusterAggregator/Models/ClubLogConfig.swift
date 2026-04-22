@@ -72,6 +72,29 @@ struct ClubLogConfig: Codable, Equatable {
             ?? "https://lotw.arrl.org/lotw-user-activity.csv"
         self.markLoTWUsers       = (try? c.decodeIfPresent(Bool.self, forKey: .markLoTWUsers)) ?? true
     }
+
+    /// Explicit encode so every field is guaranteed to persist. Swift's
+    /// auto-synthesised encode(to:) isn't always paired with a custom
+    /// init(from:) + CodingKeys the way you expect - safer to be explicit.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(callsign, forKey: .callsign)
+        try c.encode(email, forKey: .email)
+        try c.encode(appPassword, forKey: .appPassword)
+        try c.encode(apiKey, forKey: .apiKey)
+        try c.encode(autoRefreshOnStart, forKey: .autoRefreshOnStart)
+        try c.encode(refreshIntervalHours, forKey: .refreshIntervalHours)
+        try c.encode(alertNewDXCC, forKey: .alertNewDXCC)
+        try c.encode(alertNewSlot, forKey: .alertNewSlot)
+        try c.encode(alertNewBand, forKey: .alertNewBand)
+        try c.encode(alertNewMode, forKey: .alertNewMode)
+        try c.encode(alertUnconfirmed, forKey: .alertUnconfirmed)
+        try c.encode(importBands, forKey: .importBands)
+        try c.encodeIfPresent(lastRefresh, forKey: .lastRefresh)
+        try c.encode(qsoCount, forKey: .qsoCount)
+        try c.encode(lotwUsersURL, forKey: .lotwUsersURL)
+        try c.encode(markLoTWUsers, forKey: .markLoTWUsers)
+    }
 }
 
 enum AlertLevel: String, Codable {

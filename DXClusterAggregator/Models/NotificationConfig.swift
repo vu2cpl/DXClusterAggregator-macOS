@@ -41,4 +41,18 @@ struct NotificationConfig: Codable, Equatable {
         self.notifyNewBand    = (try? c.decodeIfPresent(Bool.self, forKey: .notifyNewBand)) ?? true
         self.notifyNewMode    = (try? c.decodeIfPresent(Bool.self, forKey: .notifyNewMode)) ?? true
     }
+
+    /// Explicit encode so every field is guaranteed to round-trip.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(telegramEnabled, forKey: .telegramEnabled)
+        try c.encode(telegramBotToken, forKey: .telegramBotToken)
+        try c.encode(telegramChatId, forKey: .telegramChatId)
+        try c.encode(systemEnabled, forKey: .systemEnabled)
+        try c.encode(cooldownMinutes, forKey: .cooldownMinutes)
+        try c.encode(notifyNewDXCC, forKey: .notifyNewDXCC)
+        try c.encode(notifyNewSlot, forKey: .notifyNewSlot)
+        try c.encode(notifyNewBand, forKey: .notifyNewBand)
+        try c.encode(notifyNewMode, forKey: .notifyNewMode)
+    }
 }
