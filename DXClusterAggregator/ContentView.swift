@@ -4,6 +4,7 @@ struct ContentView: View {
     @EnvironmentObject var settings: AppSettings
     @StateObject private var tcpServer = ClusterTCPServer()
     @StateObject private var clubLogClient = ClubLogClient()
+    @StateObject private var lotwDB = LoTWDatabase()
 
     @State private var udpListeners: [UUID: WSJTXUDPListener] = [:]
     @State private var dxClusterClients: [UUID: DXClusterClient] = [:]
@@ -57,6 +58,7 @@ struct ContentView: View {
         .frame(minWidth: 800, minHeight: showSettings ? 800 : 500)
         .onAppear {
             clubLogClient.loadCachedData()
+            lotwDB.loadCached()
             if settings.notifications.systemEnabled {
                 SystemNotifier.requestAuthorizationIfNeeded()
             }
@@ -470,8 +472,58 @@ struct ContentView: View {
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
+
+                Divider()
+
+                // LoTW user database (shows a green dot after callsigns of
+                // known LoTW uploaders in the spots table).
+                HStack {
+                    Toggle("Mark LoTW users", isOn: $settings.clubLog.markLoTWUsers)
+                        .help("Append a green dot after callsigns in the Callsign column for known LoTW users.")
+                    Spacer()
+                }
+                HStack {
+                    Text("LoTW URL:").frame(width: 70, alignment: .trailing)
+                    TextField("https://...", text: $settings.clubLog.lotwUsersURL)
+                        .textFieldStyle(.roundedBorder)
+                        .disableAutocorrection(true)
+                        .disabled(lotwDB.isRefreshing)
+                }
+                HStack {
+                    Button(action: refreshLoTW) {
+                        if lotwDB.isRefreshing {
+                            ProgressView().controlSize(.small).padding(.trailing, 4)
+                            Text("Refreshing LoTW...")
+                        } else {
+                            Label("Refresh LoTW users", systemImage: "person.2.circle")
+                        }
+                    }
+                    .disabled(lotwDB.isRefreshing)
+
+                    Spacer()
+
+                    Text(lotwDB.statusMessage)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
             }
             .padding(.vertical, 4)
+        }
+    }
+
+    private func refreshLoTW() {
+        let url = settings.clubLog.lotwUsersURL
+        Task {
+            await lotwDB.refresh(url: url)
+            // After refresh, re-mark existing spots in place
+            await MainActor.run {
+                for i in spots.indices {
+                    if let call = spots[i].dxCallsign {
+                        spots[i].isLoTWUser = lotwDB.isUser(call)
+                    }
+                }
+            }
         }
     }
 
@@ -708,12 +760,20 @@ struct ContentView: View {
             .width(min: 50, ideal: 70, max: 140)
 
             TableColumn("Callsign", value: \SpotMessage.sortCallsign) { spot in
-                Text(spot.dxCallsign ?? "-")
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(alertTextColor(spot.alertLevel))
-                    .bold(spot.alertLevel != .none && spot.alertLevel != .worked)
+                HStack(spacing: 2) {
+                    Text(spot.dxCallsign ?? "-")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(alertTextColor(spot.alertLevel))
+                        .bold(spot.alertLevel != .none && spot.alertLevel != .worked)
+                    if settings.clubLog.markLoTWUsers && spot.isLoTWUser {
+                        Text("•")
+                            .font(.system(.caption, design: .monospaced).bold())
+                            .foregroundColor(.green)
+                            .help("LoTW user")
+                    }
+                }
             }
-            .width(min: 70, ideal: 90, max: 160)
+            .width(min: 70, ideal: 95, max: 160)
 
             TableColumn("DXCC", value: \SpotMessage.sortDXCC) { spot in
                 Text(spot.dxccName ?? "")
@@ -1236,6 +1296,9 @@ struct ContentView: View {
         spot.dxccName = result.dxccName
         spot.bandName = result.band
         spot.isBeacon = result.isBeacon
+        if let call = spot.dxCallsign {
+            spot.isLoTWUser = lotwDB.isUser(call)
+        }
     }
 
     private func clearSpots() {

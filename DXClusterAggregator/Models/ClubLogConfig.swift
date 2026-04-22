@@ -24,6 +24,12 @@ struct ClubLogConfig: Codable, Equatable {
 
     var lastRefresh: Date? = nil
     var qsoCount: Int = 0
+
+    /// URL to the LoTW user-activity file (community-maintained lists of every
+    /// call that has ever uploaded to LoTW). Default is the HB9BZA-hosted list.
+    var lotwUsersURL: String = "https://www.hb9bza.net/lotw/lotw-user-activity.csv"
+    /// Mark LoTW users in the Callsign column with a trailing dot.
+    var markLoTWUsers: Bool = true
 }
 
 enum AlertLevel: String, Codable {

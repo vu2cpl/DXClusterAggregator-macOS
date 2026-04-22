@@ -18,6 +18,7 @@ struct SpotMessage: Identifiable {
     var dxccName: String? = nil
     var bandName: String? = nil
     var isBeacon: Bool = false
+    var isLoTWUser: Bool = false
 
     /// Prefix the message with "[BEACON] " if this spot is from a known beacon
     /// so the user sees it at a glance in the Message column.
