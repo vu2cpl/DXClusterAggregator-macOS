@@ -17,8 +17,8 @@ struct NotificationConfig: Codable, Equatable {
     /// toggles but kept separate so user can have visual highlight without push spam.
     var notifyNewDXCC: Bool = true
     var notifyNewSlot: Bool = true
-    var notifyNewBand: Bool = false
-    var notifyNewMode: Bool = false
+    var notifyNewBand: Bool = true
+    var notifyNewMode: Bool = true
 
     // Backward-compatible Codable (see ClubLogConfig for rationale)
     private enum CodingKeys: String, CodingKey {
@@ -38,7 +38,7 @@ struct NotificationConfig: Codable, Equatable {
         self.cooldownMinutes  = (try? c.decodeIfPresent(Int.self, forKey: .cooldownMinutes)) ?? 15
         self.notifyNewDXCC    = (try? c.decodeIfPresent(Bool.self, forKey: .notifyNewDXCC)) ?? true
         self.notifyNewSlot    = (try? c.decodeIfPresent(Bool.self, forKey: .notifyNewSlot)) ?? true
-        self.notifyNewBand    = (try? c.decodeIfPresent(Bool.self, forKey: .notifyNewBand)) ?? false
-        self.notifyNewMode    = (try? c.decodeIfPresent(Bool.self, forKey: .notifyNewMode)) ?? false
+        self.notifyNewBand    = (try? c.decodeIfPresent(Bool.self, forKey: .notifyNewBand)) ?? true
+        self.notifyNewMode    = (try? c.decodeIfPresent(Bool.self, forKey: .notifyNewMode)) ?? true
     }
 }

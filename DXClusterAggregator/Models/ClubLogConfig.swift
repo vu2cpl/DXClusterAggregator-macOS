@@ -11,8 +11,8 @@ struct ClubLogConfig: Codable, Equatable {
     // Alert toggles - user selects which alert types to highlight
     var alertNewDXCC: Bool = true
     var alertNewSlot: Bool = true    // new DXCC+band+mode combo
-    var alertNewBand: Bool = false   // new band on known DXCC
-    var alertNewMode: Bool = false   // new mode on known DXCC
+    var alertNewBand: Bool = true    // new band on known DXCC
+    var alertNewMode: Bool = true    // new mode on known DXCC
 
     /// When true, only confirmed QSOs (LOTW/QSL/eQSL) count as worked. A worked-but-unconfirmed
     /// slot will then be classified as "new" (so users can re-work for confirmation).
@@ -62,8 +62,8 @@ struct ClubLogConfig: Codable, Equatable {
         self.refreshIntervalHours = (try? c.decodeIfPresent(Int.self, forKey: .refreshIntervalHours)) ?? 0
         self.alertNewDXCC        = (try? c.decodeIfPresent(Bool.self, forKey: .alertNewDXCC)) ?? true
         self.alertNewSlot        = (try? c.decodeIfPresent(Bool.self, forKey: .alertNewSlot)) ?? true
-        self.alertNewBand        = (try? c.decodeIfPresent(Bool.self, forKey: .alertNewBand)) ?? false
-        self.alertNewMode        = (try? c.decodeIfPresent(Bool.self, forKey: .alertNewMode)) ?? false
+        self.alertNewBand        = (try? c.decodeIfPresent(Bool.self, forKey: .alertNewBand)) ?? true
+        self.alertNewMode        = (try? c.decodeIfPresent(Bool.self, forKey: .alertNewMode)) ?? true
         self.alertUnconfirmed    = (try? c.decodeIfPresent(Bool.self, forKey: .alertUnconfirmed)) ?? false
         self.importBands         = (try? c.decodeIfPresent(Set<String>.self, forKey: .importBands)) ?? []
         self.lastRefresh         = try? c.decodeIfPresent(Date.self, forKey: .lastRefresh)
