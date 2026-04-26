@@ -36,6 +36,12 @@ struct BroadcastDestination: Identifiable, Codable, Equatable {
     /// Source-name allowlist — empty means all sources.
     var allowedSources: Set<String> = []
     var enabled: Bool = true
+    /// When true, this destination receives EVERY classified spot (subject to
+    /// the per-destination source allowlist) regardless of the user's display
+    /// filters: New Only, Hide /N, Hide Duplicates, Bands, Sources. Useful
+    /// when feeding an upstream aggregator (e.g. RBN) that does its own
+    /// filtering and expects the raw stream.
+    var unfiltered: Bool = false
 }
 
 class AppSettings: ObservableObject {

@@ -37,6 +37,11 @@ final class UDPBroadcaster: ObservableObject {
         var format: UDPBroadcastFormat
         /// Source-name allowlist. Empty = all sources allowed.
         var allowedSources: Set<String>
+        /// If true, this destination ignores the caller's `passesFilters`
+        /// flag and accepts every spot (still subject to allowedSources).
+        /// Used for raw forwarding to upstream aggregators (e.g. RBN) that
+        /// do their own dedupe / pattern-matching / SCP.
+        var unfiltered: Bool
     }
 
     private var destinations: [Destination] = []
@@ -52,13 +57,15 @@ final class UDPBroadcaster: ObservableObject {
     /// Configure the live destination list. Pass only enabled destinations.
     func configure(destinations dests: [(id: UUID, ip: String, port: UInt16,
                                          format: UDPBroadcastFormat,
-                                         allowedSources: Set<String>)]) {
+                                         allowedSources: Set<String>,
+                                         unfiltered: Bool)]) {
         stop()
         var newDests: [Destination] = []
         for d in dests {
             if let made = Self.makeDestination(id: d.id, host: d.ip, port: d.port,
                                                format: d.format,
-                                               allowedSources: d.allowedSources) {
+                                               allowedSources: d.allowedSources,
+                                               unfiltered: d.unfiltered) {
                 newDests.append(made)
             }
         }
@@ -71,13 +78,18 @@ final class UDPBroadcaster: ObservableObject {
 
     /// Per-spot broadcast. Each destination is consulted independently and
     /// applies its own source allowlist + wire format.
+    /// - Parameter passesFilters: true if the spot passes all the user's
+    ///   live display filters (Bands / Sources / New Only / Hide /N /
+    ///   Hide Duplicates). Destinations marked `unfiltered` ignore this
+    ///   flag and accept every spot.
     func broadcast(clusterLine: String,
                    sourceName: String,
                    callsign: String?,
                    frequencyHz: UInt64,
                    snr: Int32,
                    mode: String,
-                   message: String) {
+                   message: String,
+                   passesFilters: Bool) {
         let clusterPayload = (clusterLine + "\r\n").data(using: .utf8) ?? Data()
 
         var attemptedIds: [UUID] = []
@@ -87,6 +99,10 @@ final class UDPBroadcaster: ObservableObject {
             let allowed = dest.allowedSources.isEmpty
                 || dest.allowedSources.contains(sourceName)
             guard allowed else { continue }
+            // Filtered destinations require the spot to pass user filters;
+            // unfiltered destinations always accept (as long as the source
+            // allowlist passes).
+            if !dest.unfiltered && !passesFilters { continue }
             attemptedIds.append(dest.id)
 
             let ok: Bool
@@ -209,7 +225,8 @@ final class UDPBroadcaster: ObservableObject {
 
     private static func makeDestination(id: UUID, host: String, port: UInt16,
                                         format: UDPBroadcastFormat,
-                                        allowedSources: Set<String>) -> Destination? {
+                                        allowedSources: Set<String>,
+                                        unfiltered: Bool = false) -> Destination? {
         guard !host.isEmpty, port > 0 else { return nil }
 
         var inaddr = in_addr()
@@ -236,6 +253,7 @@ final class UDPBroadcaster: ObservableObject {
         addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
 
         return Destination(id: id, host: host, port: port, fd: fd, addr: addr,
-                           format: format, allowedSources: allowedSources)
+                           format: format, allowedSources: allowedSources,
+                           unfiltered: unfiltered)
     }
 }

@@ -163,6 +163,7 @@ struct ContentView: View {
                         Text("Port").frame(width: 55, alignment: .leading)
                         Text("Format").frame(width: 110, alignment: .leading)
                         Text("Sources").frame(width: 100, alignment: .leading)
+                        Text("Unf").frame(width: 35).help("Unfiltered: send every spot, ignore display filters & dedupe")
                         Text("On").frame(width: 35)
                         Spacer()
                     }
@@ -221,6 +222,14 @@ struct ContentView: View {
 
             broadcastSourceMenuForDestination(index: index)
                 .frame(width: 100)
+
+            Toggle("", isOn: Binding(
+                get: { settings.broadcastDestinations[safe: index]?.unfiltered ?? false },
+                set: { if index < settings.broadcastDestinations.count { settings.broadcastDestinations[index].unfiltered = $0 } }
+            ))
+            .frame(width: 35)
+            .labelsHidden()
+            .help("Unfiltered: bypass display filters (Bands / Sources / New Only / Hide /N / Hide Dupes) and dedupe. Use for upstream aggregators (e.g. RBN) that do their own filtering.")
 
             Toggle("", isOn: Binding(
                 get: { settings.broadcastDestinations[safe: index]?.enabled ?? true },
@@ -1063,7 +1072,8 @@ struct ContentView: View {
                  ip: d.ip,
                  port: UInt16(d.port),
                  format: UDPBroadcastFormat(rawString: d.format),
-                 allowedSources: d.allowedSources)
+                 allowedSources: d.allowedSources,
+                 unfiltered: d.unfiltered)
             }
         udpBroadcaster.configure(destinations: dests)
     }
@@ -1094,23 +1104,26 @@ struct ContentView: View {
         // Push notifications (Telegram + system) for matching alerts, with per-call cooldown
         maybeNotify(spot)
 
-        // CQ filter and New filter apply to rebroadcast (gated live by current toggle state).
-        if shouldShow(spot) && !isRecentlyBroadcast(spot) {
-            // Spotter = source name (e.g. "WSJT-X" or "JTDX") so the local
-            // telnet client can see exactly which radio/decoder reported it.
-            let clusterMessage = ClusterFormatter.format(spot: spot, spotter: spot.sourceName)
+        // The local TCP server + filtered UDP destinations only get spots
+        // that pass display filters AND aren't recent dupes. Unfiltered UDP
+        // destinations (e.g. RBN feeds) get every spot — the broadcaster
+        // decides per-destination based on its `unfiltered` flag.
+        let passesFilters = shouldShow(spot) && !isRecentlyBroadcast(spot)
+        let clusterMessage = ClusterFormatter.format(spot: spot, spotter: spot.sourceName)
+        if passesFilters {
             tcpServer.broadcast(clusterMessage)
-            udpBroadcaster.broadcast(
-                clusterLine: clusterMessage,
-                sourceName: spot.sourceName,
-                callsign: spot.dxCallsign,
-                frequencyHz: spot.dialFrequency + UInt64(spot.deltaFrequency),
-                snr: spot.snr,
-                mode: spot.mode,
-                message: spot.message
-            )
             markBroadcast(spot)
         }
+        udpBroadcaster.broadcast(
+            clusterLine: clusterMessage,
+            sourceName: spot.sourceName,
+            callsign: spot.dxCallsign,
+            frequencyHz: spot.dialFrequency + UInt64(spot.deltaFrequency),
+            snr: spot.snr,
+            mode: spot.mode,
+            message: spot.message,
+            passesFilters: passesFilters
+        )
     }
 
     /// If the spot's alert level is one the user wants notified, push to Telegram and/or
@@ -1429,22 +1442,24 @@ struct ContentView: View {
         spots.append(spot)
         maybeNotify(spot)
 
-        if shouldShow(spot) && !isRecentlyBroadcast(spot) {
-            // Spotter = the cluster source name (e.g. "N2WQ") so local telnet
-            // clients can identify which upstream cluster the spot came from.
-            let clusterMessage = ClusterFormatter.format(spot: spot, spotter: spot.sourceName)
+        // See note in handleDecode: filtered destinations + TCP server only
+        // get spots passing display filters; unfiltered destinations get all.
+        let passesFilters = shouldShow(spot) && !isRecentlyBroadcast(spot)
+        let clusterMessage = ClusterFormatter.format(spot: spot, spotter: spot.sourceName)
+        if passesFilters {
             tcpServer.broadcast(clusterMessage)
-            udpBroadcaster.broadcast(
-                clusterLine: clusterMessage,
-                sourceName: spot.sourceName,
-                callsign: spot.dxCallsign,
-                frequencyHz: spot.dialFrequency,
-                snr: spot.snr,
-                mode: spot.mode,
-                message: spot.message
-            )
             markBroadcast(spot)
         }
+        udpBroadcaster.broadcast(
+            clusterLine: clusterMessage,
+            sourceName: spot.sourceName,
+            callsign: spot.dxCallsign,
+            frequencyHz: spot.dialFrequency,
+            snr: spot.snr,
+            mode: spot.mode,
+            message: spot.message,
+            passesFilters: passesFilters
+        )
     }
 
     /// Dedupe key: callsign + band + mode (and rough time bucket is implicit in window).
