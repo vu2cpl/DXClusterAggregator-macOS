@@ -13,7 +13,7 @@ import Darwin
 /// SO_BROADCAST is enabled unconditionally so addresses like 192.168.1.255
 /// or 255.255.255.255 work. Unicast and multicast destinations also work
 /// because the kernel just ignores the flag for those.
-final class UDPBroadcaster {
+final class UDPBroadcaster: ObservableObject {
     private struct Destination {
         let host: String
         let port: UInt16
@@ -24,18 +24,41 @@ final class UDPBroadcaster {
     private var dest1: Destination?
     private var dest2: Destination?
 
+    /// Diagnostic counters — visible in the status bar so the user can confirm
+    /// packets are actually leaving the app (vs. being filtered out upstream).
+    @Published var sentDest1: Int = 0
+    @Published var sentDest2: Int = 0
+    @Published var failDest1: Int = 0
+    @Published var failDest2: Int = 0
+
     func configure(ip1: String, port1: UInt16, ip2: String, port2: UInt16) {
         stop()
         dest1 = Self.makeDestination(host: ip1, port: port1)
         dest2 = Self.makeDestination(host: ip2, port: port2)
+        DispatchQueue.main.async {
+            self.sentDest1 = 0
+            self.sentDest2 = 0
+            self.failDest1 = 0
+            self.failDest2 = 0
+        }
     }
 
     func broadcast(_ message: String) {
         let line = message + "\r\n"
         guard let data = line.data(using: .utf8) else { return }
 
-        send(data, to: dest1)
-        send(data, to: dest2)
+        let ok1 = send(data, to: dest1)
+        let ok2 = send(data, to: dest2)
+
+        // Counter updates need to land on the main thread for SwiftUI.
+        DispatchQueue.main.async {
+            if let _ = self.dest1 {
+                if ok1 { self.sentDest1 += 1 } else { self.failDest1 += 1 }
+            }
+            if let _ = self.dest2 {
+                if ok2 { self.sentDest2 += 1 } else { self.failDest2 += 1 }
+            }
+        }
     }
 
     func stop() {
@@ -47,8 +70,10 @@ final class UDPBroadcaster {
 
     // MARK: - Private
 
-    private func send(_ data: Data, to dest: Destination?) {
-        guard var dest = dest else { return }
+    @discardableResult
+    private func send(_ data: Data, to dest: Destination?) -> Bool {
+        guard var dest = dest else { return false }
+        var ok = false
         data.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) in
             guard let base = ptr.baseAddress else { return }
             let addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
@@ -60,8 +85,11 @@ final class UDPBroadcaster {
             if n < 0 {
                 let err = String(cString: strerror(errno))
                 print("UDP broadcast to \(dest.host):\(dest.port) failed: \(err)")
+            } else {
+                ok = true
             }
         }
+        return ok
     }
 
     private static func makeDestination(host: String, port: UInt16) -> Destination? {

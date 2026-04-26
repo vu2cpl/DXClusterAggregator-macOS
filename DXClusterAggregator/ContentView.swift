@@ -8,7 +8,7 @@ struct ContentView: View {
 
     @State private var udpListeners: [UUID: WSJTXUDPListener] = [:]
     @State private var dxClusterClients: [UUID: DXClusterClient] = [:]
-    @State private var udpBroadcaster = UDPBroadcaster()
+    @StateObject private var udpBroadcaster = UDPBroadcaster()
     @State private var spots: [SpotMessage] = []
     @State private var isMonitoring = false
 
@@ -867,6 +867,17 @@ struct ContentView: View {
                 Text("TCP: \(tcpServer.clientCount) client(s)")
                     .font(.caption)
                     .foregroundColor(.blue)
+            }
+
+            // UDP broadcast packet counters (so the user can verify packets
+            // are actually leaving). Only shown while monitoring.
+            if isMonitoring && (udpBroadcaster.sentDest1 + udpBroadcaster.sentDest2 + udpBroadcaster.failDest1 + udpBroadcaster.failDest2) > 0 {
+                Text("UDP→: \(udpBroadcaster.sentDest1)/\(udpBroadcaster.sentDest2)" +
+                     ((udpBroadcaster.failDest1 + udpBroadcaster.failDest2) > 0
+                       ? " (fails \(udpBroadcaster.failDest1)/\(udpBroadcaster.failDest2))" : ""))
+                    .font(.caption)
+                    .foregroundColor(.purple)
+                    .help("Packets sent to Broadcast Destinations 1/2 (and failures, if any). Resets when configure is called.")
             }
 
             Spacer()
