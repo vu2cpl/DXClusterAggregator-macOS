@@ -28,8 +28,12 @@ class AppSettings: ObservableObject {
     @AppStorage("tcpClusterPort") var tcpClusterPort: Int = 7550
     @AppStorage("broadcastIP1") var broadcastIP1: String = "127.0.0.1"
     @AppStorage("broadcastPort1") var broadcastPort1: Int = 2236
+    /// Wire format for Broadcast Destination 1: "cluster" (DX cluster text)
+    /// or "wsjtx" (WSJT-X binary protocol — Status + Decode pair per spot).
+    @AppStorage("broadcastFormat1") var broadcastFormat1: String = "cluster"
     @AppStorage("broadcastIP2") var broadcastIP2: String = "127.0.0.1"
     @AppStorage("broadcastPort2") var broadcastPort2: Int = 2239
+    @AppStorage("broadcastFormat2") var broadcastFormat2: String = "cluster"
     @AppStorage("cqOnly") var cqOnly: Bool = false
     @AppStorage("newOnly") var newOnly: Bool = false
     @AppStorage("hideDuplicates") var hideDuplicates: Bool = true

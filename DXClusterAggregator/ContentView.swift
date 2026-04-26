@@ -158,9 +158,16 @@ struct ContentView: View {
                     TextField("2236", text: settings.broadcastPort1String)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 70)
+                    Picker("Format:", selection: $settings.broadcastFormat1) {
+                        Text("DX Cluster").tag("cluster")
+                        Text("WSJT-X UDP").tag("wsjtx")
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 170)
+                    .help("DX Cluster: text 'DX de ...' line. WSJT-X UDP: binary Status+Decode pair (for RBN Aggregator etc.).")
                     Button("Save") { saveBroadcast() }
                     Button("Test") { sendTest(toDest: 1) }
-                        .help("Fire one labelled UDP packet to this destination so you can verify reachability with nc -ulk on the receiver.")
+                        .help("Fire one labelled packet to this destination using its configured format.")
                     if let msg = bcast1TestResult {
                         Text(msg).font(.caption).foregroundColor(msg.hasPrefix("OK") ? .green : .red).lineLimit(1)
                     }
@@ -179,9 +186,16 @@ struct ContentView: View {
                     TextField("2239", text: settings.broadcastPort2String)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 70)
+                    Picker("Format:", selection: $settings.broadcastFormat2) {
+                        Text("DX Cluster").tag("cluster")
+                        Text("WSJT-X UDP").tag("wsjtx")
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 170)
+                    .help("DX Cluster: text 'DX de ...' line. WSJT-X UDP: binary Status+Decode pair (for RBN Aggregator etc.).")
                     Button("Save") { saveBroadcast() }
                     Button("Test") { sendTest(toDest: 2) }
-                        .help("Fire one labelled UDP packet to this destination so you can verify reachability with nc -ulk on the receiver.")
+                        .help("Fire one labelled packet to this destination using its configured format.")
                     if let msg = bcast2TestResult {
                         Text(msg).font(.caption).foregroundColor(msg.hasPrefix("OK") ? .green : .red).lineLimit(1)
                     }
@@ -914,10 +928,13 @@ struct ContentView: View {
     /// Doesn't depend on monitoring being active — uses the saved IP/Port fields
     /// directly. Result is shown inline next to the Test button.
     private func sendTest(toDest n: Int) {
-        let host = (n == 1) ? settings.broadcastIP1 : settings.broadcastIP2
-        let port = UInt16((n == 1) ? settings.broadcastPort1 : settings.broadcastPort2)
-        let err = udpBroadcaster.sendTest(host: host, port: port)
-        let result = err.map { "Failed: \($0)" } ?? "OK → \(host):\(port)"
+        let host   = (n == 1) ? settings.broadcastIP1 : settings.broadcastIP2
+        let port   = UInt16((n == 1) ? settings.broadcastPort1 : settings.broadcastPort2)
+        let format = UDPBroadcastFormat(rawString:
+            (n == 1) ? settings.broadcastFormat1 : settings.broadcastFormat2)
+        let err = udpBroadcaster.sendTest(host: host, port: port, format: format)
+        let label = format == .wsjtx ? "WSJT-X" : "Cluster"
+        let result = err.map { "Failed: \($0)" } ?? "OK \(label) → \(host):\(port)"
         if n == 1 {
             bcast1TestResult = result
         } else {
@@ -1005,8 +1022,10 @@ struct ContentView: View {
         udpBroadcaster.configure(
             ip1: settings.broadcastIP1,
             port1: UInt16(settings.broadcastPort1),
+            format1: UDPBroadcastFormat(rawString: settings.broadcastFormat1),
             ip2: settings.broadcastIP2,
-            port2: UInt16(settings.broadcastPort2)
+            port2: UInt16(settings.broadcastPort2),
+            format2: UDPBroadcastFormat(rawString: settings.broadcastFormat2)
         )
     }
 
@@ -1042,7 +1061,14 @@ struct ContentView: View {
             // telnet client can see exactly which radio/decoder reported it.
             let clusterMessage = ClusterFormatter.format(spot: spot, spotter: spot.sourceName)
             tcpServer.broadcast(clusterMessage)
-            udpBroadcaster.broadcast(clusterMessage)
+            udpBroadcaster.broadcast(
+                clusterLine: clusterMessage,
+                callsign: spot.dxCallsign,
+                frequencyHz: spot.dialFrequency + UInt64(spot.deltaFrequency),
+                snr: spot.snr,
+                mode: spot.mode,
+                message: spot.message
+            )
             markBroadcast(spot)
         }
     }
@@ -1307,7 +1333,14 @@ struct ContentView: View {
             // clients can identify which upstream cluster the spot came from.
             let clusterMessage = ClusterFormatter.format(spot: spot, spotter: spot.sourceName)
             tcpServer.broadcast(clusterMessage)
-            udpBroadcaster.broadcast(clusterMessage)
+            udpBroadcaster.broadcast(
+                clusterLine: clusterMessage,
+                callsign: spot.dxCallsign,
+                frequencyHz: spot.dialFrequency,
+                snr: spot.snr,
+                mode: spot.mode,
+                message: spot.message
+            )
             markBroadcast(spot)
         }
     }
