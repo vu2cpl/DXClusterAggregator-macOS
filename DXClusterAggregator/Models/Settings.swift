@@ -23,6 +23,21 @@ struct DXClusterSource: Identifiable, Codable, Equatable {
     var enabled: Bool = true
 }
 
+/// One UDP broadcast destination. Replaces the old hardcoded
+/// broadcastIP1/Port1/Format1 + broadcastIP2/Port2/Format2 pair with a
+/// dynamic list — the user can add as many destinations as they need.
+struct BroadcastDestination: Identifiable, Codable, Equatable {
+    var id = UUID()
+    var name: String = ""
+    var ip: String = "127.0.0.1"
+    var port: Int = 2236
+    /// "cluster" (DX cluster text) or "wsjtx" (WSJT-X UDP binary).
+    var format: String = "cluster"
+    /// Source-name allowlist — empty means all sources.
+    var allowedSources: Set<String> = []
+    var enabled: Bool = true
+}
+
 class AppSettings: ObservableObject {
     @AppStorage("callsign") var callsign: String = "VU2CPL"
     @AppStorage("tcpClusterPort") var tcpClusterPort: Int = 7550
@@ -65,6 +80,10 @@ class AppSettings: ObservableObject {
 
     @Published var dxClusterSources: [DXClusterSource] {
         didSet { saveCodable(dxClusterSources, key: "dxClusterSources") }
+    }
+
+    @Published var broadcastDestinations: [BroadcastDestination] {
+        didSet { saveCodable(broadcastDestinations, key: "broadcastDestinations") }
     }
 
     @Published var clubLog: ClubLogConfig {
@@ -118,6 +137,38 @@ class AppSettings: ObservableObject {
         }
         self.broadcastSources1 = Set(Self.loadCodable(key: "broadcastSources1") ?? [])
         self.broadcastSources2 = Set(Self.loadCodable(key: "broadcastSources2") ?? [])
+
+        // Broadcast destinations: load list, or migrate from old paired
+        // settings (broadcastIP1/Port1/Format1/etc.) on first launch after
+        // upgrade. We do NOT delete the old keys so a downgrade still works.
+        if let dests: [BroadcastDestination] = Self.loadCodable(key: "broadcastDestinations") {
+            self.broadcastDestinations = dests
+        } else {
+            // Migrate from paired settings
+            let d = UserDefaults.standard
+            let ip1   = d.string(forKey: "broadcastIP1")   ?? "127.0.0.1"
+            let port1 = d.integer(forKey: "broadcastPort1")
+            let fmt1  = d.string(forKey: "broadcastFormat1") ?? "cluster"
+            let srcs1 = Set((Self.loadCodable(key: "broadcastSources1") as [String]?) ?? [])
+
+            let ip2   = d.string(forKey: "broadcastIP2")   ?? "127.0.0.1"
+            let port2 = d.integer(forKey: "broadcastPort2")
+            let fmt2  = d.string(forKey: "broadcastFormat2") ?? "cluster"
+            let srcs2 = Set((Self.loadCodable(key: "broadcastSources2") as [String]?) ?? [])
+
+            var migrated: [BroadcastDestination] = []
+            if port1 > 0 {
+                migrated.append(BroadcastDestination(
+                    name: "Destination 1", ip: ip1, port: port1,
+                    format: fmt1, allowedSources: srcs1, enabled: true))
+            }
+            if port2 > 0 {
+                migrated.append(BroadcastDestination(
+                    name: "Destination 2", ip: ip2, port: port2,
+                    format: fmt2, allowedSources: srcs2, enabled: true))
+            }
+            self.broadcastDestinations = migrated
+        }
     }
 
     var cooldownMinutesString: Binding<String> {
@@ -161,6 +212,34 @@ class AppSettings: ObservableObject {
             username: callsign,
             password: ""
         ))
+    }
+
+    // Broadcast destination management
+    func addBroadcastDestination() {
+        let nextPort = (broadcastDestinations.last?.port ?? 2235) + 1
+        broadcastDestinations.append(BroadcastDestination(
+            name: "Destination \(broadcastDestinations.count + 1)",
+            ip: "127.0.0.1",
+            port: nextPort
+        ))
+    }
+
+    func removeBroadcastDestination(at index: Int) {
+        guard index < broadcastDestinations.count else { return }
+        broadcastDestinations.remove(at: index)
+    }
+
+    func broadcastPortString(at index: Int) -> Binding<String> {
+        Binding<String>(
+            get: {
+                guard index < self.broadcastDestinations.count else { return "" }
+                return String(self.broadcastDestinations[index].port)
+            },
+            set: {
+                guard index < self.broadcastDestinations.count else { return }
+                self.broadcastDestinations[index].port = Int($0) ?? self.broadcastDestinations[index].port
+            }
+        )
     }
 
     func removeDXCluster(at index: Int) {

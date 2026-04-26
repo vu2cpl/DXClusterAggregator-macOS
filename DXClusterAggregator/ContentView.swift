@@ -28,9 +28,9 @@ struct ContentView: View {
         KeyPathComparator(\SpotMessage.time, order: .reverse)
     ]
 
-    // Inline result text for the per-destination Test buttons
-    @State private var bcast1TestResult: String? = nil
-    @State private var bcast2TestResult: String? = nil
+    // Inline result text for the per-destination Test buttons,
+    // keyed by BroadcastDestination.id so each row has its own message.
+    @State private var bcastTestResults: [UUID: String] = [:]
 
     var body: some View {
         VStack(spacing: 12) {
@@ -147,64 +147,103 @@ struct ContentView: View {
                 }
             }
 
-            GroupBox("Broadcast Destination 1") {
-                HStack {
-                    Text("IP:")
-                    TextField("127.0.0.1", text: $settings.broadcastIP1)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 140)
-                        .disableAutocorrection(true)
-                    Text("Port:")
-                    TextField("2236", text: settings.broadcastPort1String)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 70)
-                    Picker("Format:", selection: $settings.broadcastFormat1) {
-                        Text("DX Cluster").tag("cluster")
-                        Text("WSJT-X UDP").tag("wsjtx")
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 170)
-                    .help("DX Cluster: text 'DX de ...' line. WSJT-X UDP: binary Status+Decode pair (for RBN Aggregator etc.).")
-                    broadcastSourceMenu(forDest: 1)
-                    Button("Save") { saveBroadcast() }
-                    Button("Test") { sendTest(toDest: 1) }
-                        .help("Fire one labelled packet to this destination using its configured format.")
-                    if let msg = bcast1TestResult {
-                        Text(msg).font(.caption).foregroundColor(msg.hasPrefix("OK") ? .green : .red).lineLimit(1)
-                    }
-                }
-                .padding(.vertical, 4)
-            }
+            broadcastDestinationsSection
+        }
+    }
 
-            GroupBox("Broadcast Destination 2") {
-                HStack {
-                    Text("IP:")
-                    TextField("127.0.0.1", text: $settings.broadcastIP2)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 140)
-                        .disableAutocorrection(true)
-                    Text("Port:")
-                    TextField("2239", text: settings.broadcastPort2String)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 70)
-                    Picker("Format:", selection: $settings.broadcastFormat2) {
-                        Text("DX Cluster").tag("cluster")
-                        Text("WSJT-X UDP").tag("wsjtx")
+    // MARK: - Broadcast Destinations (dynamic list)
+
+    private var broadcastDestinationsSection: some View {
+        GroupBox("Broadcast Destinations") {
+            VStack(spacing: 6) {
+                if !settings.broadcastDestinations.isEmpty {
+                    HStack(spacing: 8) {
+                        Text("Name").frame(width: 110, alignment: .leading)
+                        Text("IP").frame(width: 130, alignment: .leading)
+                        Text("Port").frame(width: 55, alignment: .leading)
+                        Text("Format").frame(width: 110, alignment: .leading)
+                        Text("Sources").frame(width: 100, alignment: .leading)
+                        Text("On").frame(width: 35)
+                        Spacer()
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 170)
-                    .help("DX Cluster: text 'DX de ...' line. WSJT-X UDP: binary Status+Decode pair (for RBN Aggregator etc.).")
-                    broadcastSourceMenu(forDest: 2)
-                    Button("Save") { saveBroadcast() }
-                    Button("Test") { sendTest(toDest: 2) }
-                        .help("Fire one labelled packet to this destination using its configured format.")
-                    if let msg = bcast2TestResult {
-                        Text(msg).font(.caption).foregroundColor(msg.hasPrefix("OK") ? .green : .red).lineLimit(1)
-                    }
+                    .font(.caption.bold())
+                    .padding(.horizontal, 4)
+                    Divider()
                 }
-                .padding(.vertical, 4)
+
+                ForEach(Array(settings.broadcastDestinations.enumerated()), id: \.element.id) { index, dest in
+                    broadcastDestinationRow(index: index, dest: dest)
+                }
+
+                HStack {
+                    Button(action: { settings.addBroadcastDestination() }) {
+                        Label("Add Destination", systemImage: "plus.circle")
+                    }
+                    .disabled(isMonitoring)
+                    Spacer()
+                }
+                .padding(.top, 4)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func broadcastDestinationRow(index: Int, dest: BroadcastDestination) -> some View {
+        HStack(spacing: 8) {
+            TextField("Name", text: Binding(
+                get: { settings.broadcastDestinations[safe: index]?.name ?? "" },
+                set: { if index < settings.broadcastDestinations.count { settings.broadcastDestinations[index].name = $0 } }
+            ))
+            .textFieldStyle(.roundedBorder)
+            .frame(width: 110)
+
+            TextField("IP", text: Binding(
+                get: { settings.broadcastDestinations[safe: index]?.ip ?? "" },
+                set: { if index < settings.broadcastDestinations.count { settings.broadcastDestinations[index].ip = $0 } }
+            ))
+            .textFieldStyle(.roundedBorder)
+            .frame(width: 130)
+            .disableAutocorrection(true)
+
+            TextField("Port", text: settings.broadcastPortString(at: index))
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 55)
+
+            Picker("", selection: Binding(
+                get: { settings.broadcastDestinations[safe: index]?.format ?? "cluster" },
+                set: { if index < settings.broadcastDestinations.count { settings.broadcastDestinations[index].format = $0 } }
+            )) {
+                Text("DX Cluster").tag("cluster")
+                Text("WSJT-X UDP").tag("wsjtx")
+            }
+            .labelsHidden()
+            .frame(width: 110)
+
+            broadcastSourceMenuForDestination(index: index)
+                .frame(width: 100)
+
+            Toggle("", isOn: Binding(
+                get: { settings.broadcastDestinations[safe: index]?.enabled ?? true },
+                set: { if index < settings.broadcastDestinations.count { settings.broadcastDestinations[index].enabled = $0 } }
+            ))
+            .frame(width: 35)
+            .labelsHidden()
+
+            Button("Test") { sendTestToDestination(at: index) }
+                .help("Fire a single labelled packet to this destination using its configured format.")
+
+            Button(action: { settings.removeBroadcastDestination(at: index) }) {
+                Image(systemName: "minus.circle.fill").foregroundColor(.red)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            if let msg = bcastTestResults[dest.id] {
+                Text(msg).font(.caption2).foregroundColor(msg.hasPrefix("OK") ? .green : .red).lineLimit(1)
             }
         }
+        .padding(.horizontal, 4)
     }
 
     // MARK: - UDP Sources
@@ -902,15 +941,13 @@ struct ContentView: View {
                     .foregroundColor(.blue)
             }
 
-            // UDP broadcast packet counters (so the user can verify packets
-            // are actually leaving). Only shown while monitoring.
-            if isMonitoring && (udpBroadcaster.sentDest1 + udpBroadcaster.sentDest2 + udpBroadcaster.failDest1 + udpBroadcaster.failDest2) > 0 {
-                Text("UDP→: \(udpBroadcaster.sentDest1)/\(udpBroadcaster.sentDest2)" +
-                     ((udpBroadcaster.failDest1 + udpBroadcaster.failDest2) > 0
-                       ? " (fails \(udpBroadcaster.failDest1)/\(udpBroadcaster.failDest2))" : ""))
+            // UDP broadcast packet counters (totals across all destinations).
+            if isMonitoring && (udpBroadcaster.totalSent + udpBroadcaster.totalFail) > 0 {
+                Text("UDP→: \(udpBroadcaster.totalSent)" +
+                     (udpBroadcaster.totalFail > 0 ? " (fails \(udpBroadcaster.totalFail))" : ""))
                     .font(.caption)
                     .foregroundColor(.purple)
-                    .help("Packets sent to Broadcast Destinations 1/2 (and failures, if any). Resets when configure is called.")
+                    .help("Total UDP packets sent across all enabled Broadcast Destinations (and failures, if any). Resets when destinations are reconfigured.")
             }
 
             Spacer()
@@ -929,26 +966,21 @@ struct ContentView: View {
         }
     }
 
-    /// Fire a single labelled UDP test packet to the given Broadcast Destination.
-    /// Doesn't depend on monitoring being active — uses the saved IP/Port fields
-    /// directly. Result is shown inline next to the Test button.
-    private func sendTest(toDest n: Int) {
-        let host   = (n == 1) ? settings.broadcastIP1 : settings.broadcastIP2
-        let port   = UInt16((n == 1) ? settings.broadcastPort1 : settings.broadcastPort2)
-        let format = UDPBroadcastFormat(rawString:
-            (n == 1) ? settings.broadcastFormat1 : settings.broadcastFormat2)
-        let err = udpBroadcaster.sendTest(host: host, port: port, format: format)
+    /// Fire a single labelled UDP test packet to the broadcast destination at
+    /// the given index. Result is shown inline next to its Test button.
+    private func sendTestToDestination(at index: Int) {
+        guard index < settings.broadcastDestinations.count else { return }
+        let dest = settings.broadcastDestinations[index]
+        let format = UDPBroadcastFormat(rawString: dest.format)
+        let err = udpBroadcaster.sendTest(host: dest.ip, port: UInt16(dest.port), format: format)
         let label = format == .wsjtx ? "WSJT-X" : "Cluster"
-        let result = err.map { "Failed: \($0)" } ?? "OK \(label) → \(host):\(port)"
-        if n == 1 {
-            bcast1TestResult = result
-        } else {
-            bcast2TestResult = result
-        }
-        // Auto-clear after 4s so the row doesn't permanently show the message
+        let result = err.map { "Fail: \($0)" } ?? "OK \(label) → \(dest.ip):\(dest.port)"
+        bcastTestResults[dest.id] = result
+        let id = dest.id
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-            if n == 1 { bcast1TestResult = nil } else { bcast2TestResult = nil }
+            bcastTestResults.removeValue(forKey: id)
         }
+        return
     }
 
     private func toggleMonitoring() {
@@ -1024,16 +1056,16 @@ struct ContentView: View {
     }
 
     private func configureBroadcaster() {
-        udpBroadcaster.configure(
-            ip1: settings.broadcastIP1,
-            port1: UInt16(settings.broadcastPort1),
-            format1: UDPBroadcastFormat(rawString: settings.broadcastFormat1),
-            allowedSources1: settings.broadcastSources1,
-            ip2: settings.broadcastIP2,
-            port2: UInt16(settings.broadcastPort2),
-            format2: UDPBroadcastFormat(rawString: settings.broadcastFormat2),
-            allowedSources2: settings.broadcastSources2
-        )
+        let dests = settings.broadcastDestinations
+            .filter { $0.enabled }
+            .map { d in
+                (id: d.id,
+                 ip: d.ip,
+                 port: UInt16(d.port),
+                 format: UDPBroadcastFormat(rawString: d.format),
+                 allowedSources: d.allowedSources)
+            }
+        udpBroadcaster.configure(destinations: dests)
     }
 
     @MainActor
@@ -1202,31 +1234,31 @@ struct ContentView: View {
         .help("Filter the spots table by source. Multi-select supported.")
     }
 
-    /// Per-destination source allowlist menu. Identical UX to sourceFilterMenu
-    /// but writes to settings.broadcastSources1/2 rather than selectedSources,
-    /// and is consulted ONLY by UDPBroadcaster (not the spots table).
-    private func broadcastSourceMenu(forDest n: Int) -> some View {
-        let selected: Set<String> = (n == 1) ? settings.broadcastSources1 : settings.broadcastSources2
+    /// Per-destination source allowlist menu (works on the new dynamic
+    /// broadcastDestinations list, indexed by row).
+    private func broadcastSourceMenuForDestination(index: Int) -> some View {
+        let selected: Set<String> = settings.broadcastDestinations[safe: index]?.allowedSources ?? []
         let label: String = {
-            if selected.isEmpty { return "Sources: All" }
-            if selected.count == 1 { return "Source: \(selected.first!)" }
-            return "Sources: \(selected.count)"
+            if selected.isEmpty { return "All" }
+            if selected.count == 1 { return selected.first! }
+            return "\(selected.count) sel."
         }()
 
         return Menu {
             Button(action: {
-                if n == 1 { settings.broadcastSources1 = [] }
-                else { settings.broadcastSources2 = [] }
+                if index < settings.broadcastDestinations.count {
+                    settings.broadcastDestinations[index].allowedSources = []
+                }
             }) {
                 Label("All Sources", systemImage: selected.isEmpty ? "checkmark" : "")
             }
             Divider()
             ForEach(allSourceNames, id: \.self) { name in
                 Button(action: {
-                    var s = (n == 1) ? settings.broadcastSources1 : settings.broadcastSources2
+                    guard index < settings.broadcastDestinations.count else { return }
+                    var s = settings.broadcastDestinations[index].allowedSources
                     if s.contains(name) { s.remove(name) } else { s.insert(name) }
-                    if n == 1 { settings.broadcastSources1 = s }
-                    else { settings.broadcastSources2 = s }
+                    settings.broadcastDestinations[index].allowedSources = s
                 }) {
                     Label(name, systemImage: selected.contains(name) ? "checkmark" : "")
                 }
@@ -1234,8 +1266,9 @@ struct ContentView: View {
             if !allSourceNames.isEmpty {
                 Divider()
                 Button("Clear filter") {
-                    if n == 1 { settings.broadcastSources1 = [] }
-                    else { settings.broadcastSources2 = [] }
+                    if index < settings.broadcastDestinations.count {
+                        settings.broadcastDestinations[index].allowedSources = []
+                    }
                 }
                 .disabled(selected.isEmpty)
             }

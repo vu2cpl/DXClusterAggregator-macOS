@@ -1,18 +1,6 @@
 import Foundation
 import Darwin
 
-/// Sends each spot string to up to two UDP destinations.
-///
-/// Implemented with POSIX sockets (rather than Apple's Network framework)
-/// because:
-///   1. NWConnection doesn't expose SO_BROADCAST, so packets sent to
-///      LAN-broadcast addresses like 192.168.1.255 are silently dropped.
-///   2. NWConnection's per-destination connection model is heavier than a
-///      simple sendto() call for fire-and-forget UDP.
-///
-/// SO_BROADCAST is enabled unconditionally so addresses like 192.168.1.255
-/// or 255.255.255.255 work. Unicast and multicast destinations also work
-/// because the kernel just ignores the flag for those.
 /// Wire format for a UDP broadcast destination.
 enum UDPBroadcastFormat: String, Equatable {
     /// Plain text DX cluster line: `DX de SPOTTER:  freq  call  comment  time`
@@ -27,8 +15,21 @@ enum UDPBroadcastFormat: String, Equatable {
     }
 }
 
+/// Sends each spot to N UDP destinations.
+///
+/// Implemented with POSIX sockets (rather than Apple's Network framework)
+/// because:
+///   1. NWConnection doesn't expose SO_BROADCAST, so packets sent to
+///      LAN-broadcast addresses like 192.168.1.255 are silently dropped.
+///   2. NWConnection's per-destination connection model is heavier than a
+///      simple sendto() call for fire-and-forget UDP.
+///
+/// SO_BROADCAST is enabled unconditionally so addresses like 192.168.1.255
+/// or 255.255.255.255 work. Unicast and multicast destinations also work
+/// because the kernel just ignores the flag for those.
 final class UDPBroadcaster: ObservableObject {
     private struct Destination {
+        let id: UUID
         let host: String
         let port: UInt16
         let fd: Int32
@@ -38,35 +39,38 @@ final class UDPBroadcaster: ObservableObject {
         var allowedSources: Set<String>
     }
 
-    private var dest1: Destination?
-    private var dest2: Destination?
+    private var destinations: [Destination] = []
 
-    /// Diagnostic counters — visible in the status bar so the user can confirm
-    /// packets are actually leaving the app (vs. being filtered out upstream).
-    @Published var sentDest1: Int = 0
-    @Published var sentDest2: Int = 0
-    @Published var failDest1: Int = 0
-    @Published var failDest2: Int = 0
+    /// Per-destination diagnostic counters keyed by destination UUID.
+    @Published var sentCounts: [UUID: Int] = [:]
+    @Published var failCounts: [UUID: Int] = [:]
 
-    func configure(ip1: String, port1: UInt16, format1: UDPBroadcastFormat, allowedSources1: Set<String>,
-                   ip2: String, port2: UInt16, format2: UDPBroadcastFormat, allowedSources2: Set<String>) {
+    /// Convenience: total sent across all destinations (for the status bar).
+    var totalSent: Int { sentCounts.values.reduce(0, +) }
+    var totalFail: Int { failCounts.values.reduce(0, +) }
+
+    /// Configure the live destination list. Pass only enabled destinations.
+    func configure(destinations dests: [(id: UUID, ip: String, port: UInt16,
+                                         format: UDPBroadcastFormat,
+                                         allowedSources: Set<String>)]) {
         stop()
-        dest1 = Self.makeDestination(host: ip1, port: port1, format: format1, allowedSources: allowedSources1)
-        dest2 = Self.makeDestination(host: ip2, port: port2, format: format2, allowedSources: allowedSources2)
+        var newDests: [Destination] = []
+        for d in dests {
+            if let made = Self.makeDestination(id: d.id, host: d.ip, port: d.port,
+                                               format: d.format,
+                                               allowedSources: d.allowedSources) {
+                newDests.append(made)
+            }
+        }
+        destinations = newDests
         DispatchQueue.main.async {
-            self.sentDest1 = 0
-            self.sentDest2 = 0
-            self.failDest1 = 0
-            self.failDest2 = 0
+            self.sentCounts = [:]
+            self.failCounts = [:]
         }
     }
 
-    /// Send a spot to both broadcast destinations using each one's
-    /// configured wire format. Cluster-format destinations get the prebuilt
-    /// `clusterLine` (DX cluster text). WSJT-X-format destinations get a
-    /// freshly-encoded Status+Decode pair for this specific spot so a
-    /// downstream WSJT-X-aware listener (RBN Aggregator etc.) sees a
-    /// well-formed binary message stream.
+    /// Per-spot broadcast. Each destination is consulted independently and
+    /// applies its own source allowlist + wire format.
     func broadcast(clusterLine: String,
                    sourceName: String,
                    callsign: String?,
@@ -76,77 +80,63 @@ final class UDPBroadcaster: ObservableObject {
                    message: String) {
         let clusterPayload = (clusterLine + "\r\n").data(using: .utf8) ?? Data()
 
-        // Per-destination source filter: skip a destination if its allowlist
-        // is non-empty and doesn't include this spot's source. The OK/fail
-        // counters only update for destinations that actually attempted a
-        // send — skipped-by-filter doesn't count as a fail.
-        let attempted1 = dest1.map { $0.allowedSources.isEmpty || $0.allowedSources.contains(sourceName) } ?? false
-        let attempted2 = dest2.map { $0.allowedSources.isEmpty || $0.allowedSources.contains(sourceName) } ?? false
+        var attemptedIds: [UUID] = []
+        var resultIds: [UUID: Bool] = [:]
 
-        let ok1 = attempted1 ? sendForDestination(dest1, clusterPayload: clusterPayload,
-                                                  callsign: callsign, frequencyHz: frequencyHz,
-                                                  snr: snr, mode: mode, message: message) : false
-        let ok2 = attempted2 ? sendForDestination(dest2, clusterPayload: clusterPayload,
-                                                  callsign: callsign, frequencyHz: frequencyHz,
-                                                  snr: snr, mode: mode, message: message) : false
+        for dest in destinations {
+            let allowed = dest.allowedSources.isEmpty
+                || dest.allowedSources.contains(sourceName)
+            guard allowed else { continue }
+            attemptedIds.append(dest.id)
+
+            let ok: Bool
+            switch dest.format {
+            case .cluster:
+                ok = send(clusterPayload, to: dest)
+            case .wsjtx:
+                if let call = callsign, !call.isEmpty {
+                    let pair = WSJTXMessageBuilder.encodeSpot(
+                        callsign: call,
+                        frequencyHz: frequencyHz,
+                        snr: snr,
+                        mode: mode,
+                        message: message
+                    )
+                    let s1 = send(pair.status, to: dest)
+                    let s2 = send(pair.decode, to: dest)
+                    ok = s1 && s2
+                } else {
+                    ok = false
+                }
+            }
+            resultIds[dest.id] = ok
+        }
 
         DispatchQueue.main.async {
-            if attempted1 {
-                if ok1 { self.sentDest1 += 1 } else { self.failDest1 += 1 }
+            for id in attemptedIds {
+                if resultIds[id] == true {
+                    self.sentCounts[id, default: 0] += 1
+                } else {
+                    self.failCounts[id, default: 0] += 1
+                }
             }
-            if attempted2 {
-                if ok2 { self.sentDest2 += 1 } else { self.failDest2 += 1 }
-            }
-        }
-    }
-
-    private func sendForDestination(_ dest: Destination?,
-                                    clusterPayload: Data,
-                                    callsign: String?,
-                                    frequencyHz: UInt64,
-                                    snr: Int32,
-                                    mode: String,
-                                    message: String) -> Bool {
-        guard let dest = dest else { return false }
-        switch dest.format {
-        case .cluster:
-            return send(clusterPayload, to: dest)
-        case .wsjtx:
-            // Need a callsign for WSJT-X to make sense; if missing, skip.
-            guard let call = callsign, !call.isEmpty else { return false }
-            let pair = WSJTXMessageBuilder.encodeSpot(
-                callsign: call,
-                frequencyHz: frequencyHz,
-                snr: snr,
-                mode: mode,
-                message: message
-            )
-            // Send Status first so the receiver knows the dial frequency,
-            // then Decode immediately after. UDP doesn't preserve order
-            // strictly but back-to-back local sends almost always arrive in
-            // sequence, and most receivers tolerate either order anyway.
-            let s1 = send(pair.status, to: dest)
-            let s2 = send(pair.decode, to: dest)
-            return s1 && s2
         }
     }
 
     func stop() {
-        if let d = dest1 { Darwin.close(d.fd) }
-        if let d = dest2 { Darwin.close(d.fd) }
-        dest1 = nil
-        dest2 = nil
+        for d in destinations {
+            Darwin.close(d.fd)
+        }
+        destinations.removeAll()
     }
 
-    /// Fire a single labelled test packet to the given destination, configuring
-    /// the socket on the fly if necessary. Returns nil on success or an error
-    /// string. This bypasses the Save flow so the user can probe arbitrary
-    /// IP/port combos without wiring them into the live config.
+    /// Fire a single labelled test packet using a freshly-created socket.
+    /// Doesn't depend on configure() having run.
     @discardableResult
     func sendTest(host: String, port: UInt16,
                   format: UDPBroadcastFormat = .cluster) -> String? {
-        guard let d = Self.makeDestination(host: host, port: port, format: format,
-                                           allowedSources: []) else {
+        guard let d = Self.makeDestination(id: UUID(), host: host, port: port,
+                                           format: format, allowedSources: []) else {
             return "Invalid host/port"
         }
         defer { Darwin.close(d.fd) }
@@ -159,8 +149,6 @@ final class UDPBroadcaster: ObservableObject {
             guard let data = text.data(using: .utf8) else { return "encode failed" }
             payload = data
         case .wsjtx:
-            // Send a representative Decode (with prerequisite Status) so the
-            // receiver can confirm parsing as well as transport.
             let pair = WSJTXMessageBuilder.encodeSpot(
                 callsign: "TEST",
                 frequencyHz: 14_074_000,
@@ -170,16 +158,16 @@ final class UDPBroadcaster: ObservableObject {
             )
             payload = pair.status + pair.decode
         }
-        let data = payload
 
-        var dest = d
+        let fd = d.fd
+        var addr = d.addr
         var ok = false
         var errMsg: String? = nil
-        data.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) in
+        payload.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) in
             guard let base = ptr.baseAddress else { return }
-            let n = withUnsafePointer(to: &dest.addr) { addrPtr -> ssize_t in
+            let n = withUnsafePointer(to: &addr) { addrPtr -> ssize_t in
                 addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
-                    Darwin.sendto(dest.fd, base, data.count, 0, sa,
+                    Darwin.sendto(fd, base, payload.count, 0, sa,
                                   socklen_t(MemoryLayout<sockaddr_in>.size))
                 }
             }
@@ -196,19 +184,22 @@ final class UDPBroadcaster: ObservableObject {
 
     @discardableResult
     private func send(_ data: Data, to dest: Destination) -> Bool {
-        var dest = dest
+        let fd = dest.fd
+        var addr = dest.addr
+        let host = dest.host
+        let port = dest.port
         var ok = false
         data.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) in
             guard let base = ptr.baseAddress else { return }
             let addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
-            let n = withUnsafePointer(to: &dest.addr) { addrPtr -> ssize_t in
+            let n = withUnsafePointer(to: &addr) { addrPtr -> ssize_t in
                 addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
-                    Darwin.sendto(dest.fd, base, data.count, 0, sa, addrSize)
+                    Darwin.sendto(fd, base, data.count, 0, sa, addrSize)
                 }
             }
             if n < 0 {
                 let err = String(cString: strerror(errno))
-                print("UDP broadcast to \(dest.host):\(dest.port) failed: \(err)")
+                print("UDP broadcast to \(host):\(port) failed: \(err)")
             } else {
                 ok = true
             }
@@ -216,13 +207,11 @@ final class UDPBroadcaster: ObservableObject {
         return ok
     }
 
-    private static func makeDestination(host: String, port: UInt16,
+    private static func makeDestination(id: UUID, host: String, port: UInt16,
                                         format: UDPBroadcastFormat,
                                         allowedSources: Set<String>) -> Destination? {
         guard !host.isEmpty, port > 0 else { return nil }
 
-        // Resolve dotted-quad to in_addr (we only support IPv4 here, which
-        // covers all common DX-cluster broadcast configurations).
         var inaddr = in_addr()
         guard inet_pton(AF_INET, host, &inaddr) == 1 else {
             print("UDPBroadcaster: invalid IPv4 address \(host)")
@@ -235,11 +224,9 @@ final class UDPBroadcaster: ObservableObject {
             return nil
         }
 
-        // Enable broadcast so x.x.x.255 / 255.255.255.255 work.
         var yes: Int32 = 1
         if setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &yes, socklen_t(MemoryLayout<Int32>.size)) < 0 {
             print("UDPBroadcaster: SO_BROADCAST setsockopt failed: \(String(cString: strerror(errno)))")
-            // continue anyway - unicast still works
         }
 
         var addr = sockaddr_in()
@@ -248,7 +235,7 @@ final class UDPBroadcaster: ObservableObject {
         addr.sin_addr = inaddr
         addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
 
-        return Destination(host: host, port: port, fd: fd, addr: addr,
+        return Destination(id: id, host: host, port: port, fd: fd, addr: addr,
                            format: format, allowedSources: allowedSources)
     }
 }
