@@ -37,6 +37,11 @@ class AppSettings: ObservableObject {
     @AppStorage("cqOnly") var cqOnly: Bool = false
     @AppStorage("newOnly") var newOnly: Bool = false
     @AppStorage("hideDuplicates") var hideDuplicates: Bool = true
+    /// Hide call-area portables like W1AW/4, K1JT/5, OE/3 etc. These are
+    /// same-DXCC operations from a different region and rarely useful as DX.
+    /// Prefix-override portables (VK7/W3LPL, JA1/G3XYZ) are NOT filtered —
+    /// those represent real DX from another entity.
+    @AppStorage("hidePortableCallAreas") var hidePortableCallAreas: Bool = true
     @AppStorage("minimizeOnStart") var minimizeOnStart: Bool = false
     @AppStorage("autoStartOnLaunch") var autoStartOnLaunch: Bool = false
 

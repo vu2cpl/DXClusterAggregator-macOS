@@ -741,6 +741,9 @@ struct ContentView: View {
             Toggle("Hide Dupes", isOn: $settings.hideDuplicates)
                 .fixedSize()
                 .help("Collapse repeat spots of the same call/band/mode within a 60-second window")
+            Toggle("Hide /N", isOn: $settings.hidePortableCallAreas)
+                .fixedSize()
+                .help("Hide call-area portables like W1AW/4, K1JT/5 — they are same-DXCC moves, not new DX. Prefix overrides like VK7/W3LPL still pass.")
 
             Toggle("Auto Start", isOn: $settings.autoStartOnLaunch)
                 .fixedSize()
@@ -1308,7 +1311,22 @@ struct ContentView: View {
            !settings.displayBands.contains(band) { return false }
         if !settings.selectedSources.isEmpty,
            !settings.selectedSources.contains(spot.sourceName) { return false }
+        if settings.hidePortableCallAreas,
+           let call = spot.dxCallsign,
+           Self.isCallAreaPortable(call) { return false }
         return true
+    }
+
+    /// True for X/N or X/NN where N is digits only (e.g. W1AW/4, K1JT/5,
+    /// OE/3). These are within-entity call-area moves, not new DX. Does NOT
+    /// match prefix overrides like VK7/W3LPL or JA1/G3XYZ — those have a
+    /// non-numeric "suffix" and represent real DX from a different entity.
+    static func isCallAreaPortable(_ call: String) -> Bool {
+        let upper = call.uppercased()
+        guard let slash = upper.firstIndex(of: "/") else { return false }
+        let suffix = upper[upper.index(after: slash)...]
+        guard !suffix.isEmpty, suffix.count <= 2 else { return false }
+        return suffix.allSatisfy { $0.isNumber }
     }
 
     private var displayedSpots: [SpotMessage] {
