@@ -1202,19 +1202,15 @@ struct ContentView: View {
     /// Per-destination source allowlist menu. Identical UX to sourceFilterMenu
     /// but writes to settings.broadcastSources1/2 rather than selectedSources,
     /// and is consulted ONLY by UDPBroadcaster (not the spots table).
-    @ViewBuilder
     private func broadcastSourceMenu(forDest n: Int) -> some View {
         let selected: Set<String> = (n == 1) ? settings.broadcastSources1 : settings.broadcastSources2
-        let label: String
-        if selected.isEmpty {
-            label = "Sources: All"
-        } else if selected.count == 1 {
-            label = "Source: \(selected.first!)"
-        } else {
-            label = "Sources: \(selected.count)"
-        }
+        let label: String = {
+            if selected.isEmpty { return "Sources: All" }
+            if selected.count == 1 { return "Source: \(selected.first!)" }
+            return "Sources: \(selected.count)"
+        }()
 
-        Menu {
+        return Menu {
             Button(action: {
                 if n == 1 { settings.broadcastSources1 = [] }
                 else { settings.broadcastSources2 = [] }
