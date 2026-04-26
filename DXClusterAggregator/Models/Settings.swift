@@ -83,6 +83,19 @@ class AppSettings: ObservableObject {
         didSet { saveCodable(Array(displayBands), key: "displayBands") }
     }
 
+    /// Per-destination source allowlist for the UDP broadcasters.
+    /// Empty set = all sources are allowed (current behaviour).
+    /// Non-empty = only spots whose sourceName is in the set get
+    /// rebroadcast to that destination. Lets the user, e.g., restrict
+    /// a WSJT-X-format destination feeding RBN to ONLY their own
+    /// WSJT-X / JTDX / SkimSrv spots and never relay other clusters.
+    @Published var broadcastSources1: Set<String> {
+        didSet { saveCodable(Array(broadcastSources1), key: "broadcastSources1") }
+    }
+    @Published var broadcastSources2: Set<String> {
+        didSet { saveCodable(Array(broadcastSources2), key: "broadcastSources2") }
+    }
+
     init() {
         self.udpSources = Self.loadCodable(key: "udpSources") ?? UDPSource.defaultSources
         self.dxClusterSources = Self.loadCodable(key: "dxClusterSources") ?? []
@@ -98,6 +111,8 @@ class AppSettings: ObservableObject {
         } else {
             self.displayBands = []
         }
+        self.broadcastSources1 = Set(Self.loadCodable(key: "broadcastSources1") ?? [])
+        self.broadcastSources2 = Set(Self.loadCodable(key: "broadcastSources2") ?? [])
     }
 
     var cooldownMinutesString: Binding<String> {

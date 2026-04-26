@@ -165,6 +165,7 @@ struct ContentView: View {
                     .pickerStyle(.menu)
                     .frame(width: 170)
                     .help("DX Cluster: text 'DX de ...' line. WSJT-X UDP: binary Status+Decode pair (for RBN Aggregator etc.).")
+                    broadcastSourceMenu(forDest: 1)
                     Button("Save") { saveBroadcast() }
                     Button("Test") { sendTest(toDest: 1) }
                         .help("Fire one labelled packet to this destination using its configured format.")
@@ -193,6 +194,7 @@ struct ContentView: View {
                     .pickerStyle(.menu)
                     .frame(width: 170)
                     .help("DX Cluster: text 'DX de ...' line. WSJT-X UDP: binary Status+Decode pair (for RBN Aggregator etc.).")
+                    broadcastSourceMenu(forDest: 2)
                     Button("Save") { saveBroadcast() }
                     Button("Test") { sendTest(toDest: 2) }
                         .help("Fire one labelled packet to this destination using its configured format.")
@@ -1023,9 +1025,11 @@ struct ContentView: View {
             ip1: settings.broadcastIP1,
             port1: UInt16(settings.broadcastPort1),
             format1: UDPBroadcastFormat(rawString: settings.broadcastFormat1),
+            allowedSources1: settings.broadcastSources1,
             ip2: settings.broadcastIP2,
             port2: UInt16(settings.broadcastPort2),
-            format2: UDPBroadcastFormat(rawString: settings.broadcastFormat2)
+            format2: UDPBroadcastFormat(rawString: settings.broadcastFormat2),
+            allowedSources2: settings.broadcastSources2
         )
     }
 
@@ -1063,6 +1067,7 @@ struct ContentView: View {
             tcpServer.broadcast(clusterMessage)
             udpBroadcaster.broadcast(
                 clusterLine: clusterMessage,
+                sourceName: spot.sourceName,
                 callsign: spot.dxCallsign,
                 frequencyHz: spot.dialFrequency + UInt64(spot.deltaFrequency),
                 snr: spot.snr,
@@ -1192,6 +1197,55 @@ struct ContentView: View {
         .menuStyle(.borderlessButton)
         .fixedSize()
         .help("Filter the spots table by source. Multi-select supported.")
+    }
+
+    /// Per-destination source allowlist menu. Identical UX to sourceFilterMenu
+    /// but writes to settings.broadcastSources1/2 rather than selectedSources,
+    /// and is consulted ONLY by UDPBroadcaster (not the spots table).
+    @ViewBuilder
+    private func broadcastSourceMenu(forDest n: Int) -> some View {
+        let selected: Set<String> = (n == 1) ? settings.broadcastSources1 : settings.broadcastSources2
+        let label: String
+        if selected.isEmpty {
+            label = "Sources: All"
+        } else if selected.count == 1 {
+            label = "Source: \(selected.first!)"
+        } else {
+            label = "Sources: \(selected.count)"
+        }
+
+        Menu {
+            Button(action: {
+                if n == 1 { settings.broadcastSources1 = [] }
+                else { settings.broadcastSources2 = [] }
+            }) {
+                Label("All Sources", systemImage: selected.isEmpty ? "checkmark" : "")
+            }
+            Divider()
+            ForEach(allSourceNames, id: \.self) { name in
+                Button(action: {
+                    var s = (n == 1) ? settings.broadcastSources1 : settings.broadcastSources2
+                    if s.contains(name) { s.remove(name) } else { s.insert(name) }
+                    if n == 1 { settings.broadcastSources1 = s }
+                    else { settings.broadcastSources2 = s }
+                }) {
+                    Label(name, systemImage: selected.contains(name) ? "checkmark" : "")
+                }
+            }
+            if !allSourceNames.isEmpty {
+                Divider()
+                Button("Clear filter") {
+                    if n == 1 { settings.broadcastSources1 = [] }
+                    else { settings.broadcastSources2 = [] }
+                }
+                .disabled(selected.isEmpty)
+            }
+        } label: {
+            Label(label, systemImage: "line.3.horizontal.decrease.circle")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("Restrict which spot sources are forwarded to this destination. Useful e.g. to send only your own WSJT-X / SkimSrv spots to RBN and NEVER relay other clusters' spots.")
     }
 
     /// All common ham-radio bands for the dropdown.
@@ -1335,6 +1389,7 @@ struct ContentView: View {
             tcpServer.broadcast(clusterMessage)
             udpBroadcaster.broadcast(
                 clusterLine: clusterMessage,
+                sourceName: spot.sourceName,
                 callsign: spot.dxCallsign,
                 frequencyHz: spot.dialFrequency,
                 snr: spot.snr,

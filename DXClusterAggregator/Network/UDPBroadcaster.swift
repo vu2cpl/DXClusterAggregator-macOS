@@ -34,6 +34,8 @@ final class UDPBroadcaster: ObservableObject {
         let fd: Int32
         var addr: sockaddr_in
         var format: UDPBroadcastFormat
+        /// Source-name allowlist. Empty = all sources allowed.
+        var allowedSources: Set<String>
     }
 
     private var dest1: Destination?
@@ -46,11 +48,11 @@ final class UDPBroadcaster: ObservableObject {
     @Published var failDest1: Int = 0
     @Published var failDest2: Int = 0
 
-    func configure(ip1: String, port1: UInt16, format1: UDPBroadcastFormat,
-                   ip2: String, port2: UInt16, format2: UDPBroadcastFormat) {
+    func configure(ip1: String, port1: UInt16, format1: UDPBroadcastFormat, allowedSources1: Set<String>,
+                   ip2: String, port2: UInt16, format2: UDPBroadcastFormat, allowedSources2: Set<String>) {
         stop()
-        dest1 = Self.makeDestination(host: ip1, port: port1, format: format1)
-        dest2 = Self.makeDestination(host: ip2, port: port2, format: format2)
+        dest1 = Self.makeDestination(host: ip1, port: port1, format: format1, allowedSources: allowedSources1)
+        dest2 = Self.makeDestination(host: ip2, port: port2, format: format2, allowedSources: allowedSources2)
         DispatchQueue.main.async {
             self.sentDest1 = 0
             self.sentDest2 = 0
@@ -66,6 +68,7 @@ final class UDPBroadcaster: ObservableObject {
     /// downstream WSJT-X-aware listener (RBN Aggregator etc.) sees a
     /// well-formed binary message stream.
     func broadcast(clusterLine: String,
+                   sourceName: String,
                    callsign: String?,
                    frequencyHz: UInt64,
                    snr: Int32,
@@ -73,18 +76,25 @@ final class UDPBroadcaster: ObservableObject {
                    message: String) {
         let clusterPayload = (clusterLine + "\r\n").data(using: .utf8) ?? Data()
 
-        let ok1 = sendForDestination(dest1, clusterPayload: clusterPayload,
-                                     callsign: callsign, frequencyHz: frequencyHz,
-                                     snr: snr, mode: mode, message: message)
-        let ok2 = sendForDestination(dest2, clusterPayload: clusterPayload,
-                                     callsign: callsign, frequencyHz: frequencyHz,
-                                     snr: snr, mode: mode, message: message)
+        // Per-destination source filter: skip a destination if its allowlist
+        // is non-empty and doesn't include this spot's source. The OK/fail
+        // counters only update for destinations that actually attempted a
+        // send — skipped-by-filter doesn't count as a fail.
+        let attempted1 = dest1.map { $0.allowedSources.isEmpty || $0.allowedSources.contains(sourceName) } ?? false
+        let attempted2 = dest2.map { $0.allowedSources.isEmpty || $0.allowedSources.contains(sourceName) } ?? false
+
+        let ok1 = attempted1 ? sendForDestination(dest1, clusterPayload: clusterPayload,
+                                                  callsign: callsign, frequencyHz: frequencyHz,
+                                                  snr: snr, mode: mode, message: message) : false
+        let ok2 = attempted2 ? sendForDestination(dest2, clusterPayload: clusterPayload,
+                                                  callsign: callsign, frequencyHz: frequencyHz,
+                                                  snr: snr, mode: mode, message: message) : false
 
         DispatchQueue.main.async {
-            if let _ = self.dest1 {
+            if attempted1 {
                 if ok1 { self.sentDest1 += 1 } else { self.failDest1 += 1 }
             }
-            if let _ = self.dest2 {
+            if attempted2 {
                 if ok2 { self.sentDest2 += 1 } else { self.failDest2 += 1 }
             }
         }
@@ -135,7 +145,8 @@ final class UDPBroadcaster: ObservableObject {
     @discardableResult
     func sendTest(host: String, port: UInt16,
                   format: UDPBroadcastFormat = .cluster) -> String? {
-        guard let d = Self.makeDestination(host: host, port: port, format: format) else {
+        guard let d = Self.makeDestination(host: host, port: port, format: format,
+                                           allowedSources: []) else {
             return "Invalid host/port"
         }
         defer { Darwin.close(d.fd) }
@@ -206,7 +217,8 @@ final class UDPBroadcaster: ObservableObject {
     }
 
     private static func makeDestination(host: String, port: UInt16,
-                                        format: UDPBroadcastFormat) -> Destination? {
+                                        format: UDPBroadcastFormat,
+                                        allowedSources: Set<String>) -> Destination? {
         guard !host.isEmpty, port > 0 else { return nil }
 
         // Resolve dotted-quad to in_addr (we only support IPv4 here, which
@@ -236,6 +248,7 @@ final class UDPBroadcaster: ObservableObject {
         addr.sin_addr = inaddr
         addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
 
-        return Destination(host: host, port: port, fd: fd, addr: addr, format: format)
+        return Destination(host: host, port: port, fd: fd, addr: addr,
+                           format: format, allowedSources: allowedSources)
     }
 }
