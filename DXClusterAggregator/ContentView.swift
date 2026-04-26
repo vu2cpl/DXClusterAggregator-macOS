@@ -28,6 +28,10 @@ struct ContentView: View {
         KeyPathComparator(\SpotMessage.time, order: .reverse)
     ]
 
+    // Inline result text for the per-destination Test buttons
+    @State private var bcast1TestResult: String? = nil
+    @State private var bcast2TestResult: String? = nil
+
     var body: some View {
         VStack(spacing: 12) {
             headerSection
@@ -155,6 +159,11 @@ struct ContentView: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 70)
                     Button("Save") { saveBroadcast() }
+                    Button("Test") { sendTest(toDest: 1) }
+                        .help("Fire one labelled UDP packet to this destination so you can verify reachability with nc -ulk on the receiver.")
+                    if let msg = bcast1TestResult {
+                        Text(msg).font(.caption).foregroundColor(msg.hasPrefix("OK") ? .green : .red).lineLimit(1)
+                    }
                 }
                 .padding(.vertical, 4)
             }
@@ -171,6 +180,11 @@ struct ContentView: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 70)
                     Button("Save") { saveBroadcast() }
+                    Button("Test") { sendTest(toDest: 2) }
+                        .help("Fire one labelled UDP packet to this destination so you can verify reachability with nc -ulk on the receiver.")
+                    if let msg = bcast2TestResult {
+                        Text(msg).font(.caption).foregroundColor(msg.hasPrefix("OK") ? .green : .red).lineLimit(1)
+                    }
                 }
                 .padding(.vertical, 4)
             }
@@ -893,6 +907,25 @@ struct ContentView: View {
     private func saveBroadcast() {
         if isMonitoring {
             configureBroadcaster()
+        }
+    }
+
+    /// Fire a single labelled UDP test packet to the given Broadcast Destination.
+    /// Doesn't depend on monitoring being active — uses the saved IP/Port fields
+    /// directly. Result is shown inline next to the Test button.
+    private func sendTest(toDest n: Int) {
+        let host = (n == 1) ? settings.broadcastIP1 : settings.broadcastIP2
+        let port = UInt16((n == 1) ? settings.broadcastPort1 : settings.broadcastPort2)
+        let err = udpBroadcaster.sendTest(host: host, port: port)
+        let result = err.map { "Failed: \($0)" } ?? "OK → \(host):\(port)"
+        if n == 1 {
+            bcast1TestResult = result
+        } else {
+            bcast2TestResult = result
+        }
+        // Auto-clear after 4s so the row doesn't permanently show the message
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            if n == 1 { bcast1TestResult = nil } else { bcast2TestResult = nil }
         }
     }
 

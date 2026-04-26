@@ -68,6 +68,41 @@ final class UDPBroadcaster: ObservableObject {
         dest2 = nil
     }
 
+    /// Fire a single labelled test packet to the given destination, configuring
+    /// the socket on the fly if necessary. Returns nil on success or an error
+    /// string. This bypasses the Save flow so the user can probe arbitrary
+    /// IP/port combos without wiring them into the live config.
+    @discardableResult
+    func sendTest(host: String, port: UInt16) -> String? {
+        guard let d = Self.makeDestination(host: host, port: port) else {
+            return "Invalid host/port"
+        }
+        defer { Darwin.close(d.fd) }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        let payload = "TEST DXClusterAggregator \(now) -> \(host):\(port)\r\n"
+        guard let data = payload.data(using: .utf8) else { return "encode failed" }
+
+        var dest = d
+        var ok = false
+        var errMsg: String? = nil
+        data.withUnsafeBytes { (ptr: UnsafeRawBufferPointer) in
+            guard let base = ptr.baseAddress else { return }
+            let n = withUnsafePointer(to: &dest.addr) { addrPtr -> ssize_t in
+                addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                    Darwin.sendto(dest.fd, base, data.count, 0, sa,
+                                  socklen_t(MemoryLayout<sockaddr_in>.size))
+                }
+            }
+            if n < 0 {
+                errMsg = String(cString: strerror(errno))
+            } else {
+                ok = true
+            }
+        }
+        return ok ? nil : (errMsg ?? "unknown error")
+    }
+
     // MARK: - Private
 
     @discardableResult
