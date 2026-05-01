@@ -136,22 +136,29 @@ class WSJTXMessageParser {
         }
     }
 
+    /// Permissive Status parser. Only the first two fields are critical
+    /// (clientId + dialFrequency) — without them the message is useless.
+    /// Everything past that is best-effort: emitters like MSHV, JTDX, and
+    /// older WSJT-X versions trim or extend the trailing fields, and a
+    /// strict guard chain made us drop the whole Status (and thus lose the
+    /// dial frequency, which then made every Decode display freq as the
+    /// raw audio offset, e.g. 1500 Hz → 0.001 MHz).
     private func parseStatus() -> WSJTXStatus? {
-        guard let clientId = readUTF8String(),
-              let dialFreq = readUInt64(),
-              let mode = readUTF8String(),
-              let dxCall = readUTF8String(),
-              let report = readUTF8String(),
-              let txMode = readUTF8String(),
-              let txEnabled = readBool(),
-              let transmitting = readBool(),
-              let decoding = readBool(),
-              let rxDF = readUInt32(),
-              let txDF = readUInt32(),
-              let deCall = readUTF8String(),
-              let deGrid = readUTF8String(),
-              let dxGrid = readUTF8String()
-        else { return nil }
+        guard let clientId = readUTF8String() else { return nil }
+        guard let dialFreq = readUInt64() else { return nil }
+
+        let mode         = readUTF8String() ?? ""
+        let dxCall       = readUTF8String() ?? ""
+        let report       = readUTF8String() ?? ""
+        let txMode       = readUTF8String() ?? ""
+        let txEnabled    = readBool() ?? false
+        let transmitting = readBool() ?? false
+        let decoding     = readBool() ?? false
+        let rxDF         = readUInt32() ?? 0
+        let txDF         = readUInt32() ?? 0
+        let deCall       = readUTF8String() ?? ""
+        let deGrid       = readUTF8String() ?? ""
+        let dxGrid       = readUTF8String() ?? ""
 
         return WSJTXStatus(
             clientId: clientId,
@@ -171,18 +178,20 @@ class WSJTXMessageParser {
         )
     }
 
+    /// Permissive Decode parser. Required: clientId, time, snr, deltaTime,
+    /// deltaFrequency, mode, message. The two trailing flags
+    /// (lowConfidence, offAir) and the leading isNew flag are best-effort.
     private func parseDecode() -> WSJTXDecode? {
-        guard let clientId = readUTF8String(),
-              let isNew = readBool(),
-              let time = readUInt32(),
-              let snr = readInt32(),
-              let deltaTime = readDouble(),
-              let deltaFreq = readUInt32(),
-              let mode = readUTF8String(),
-              let message = readUTF8String(),
-              let lowConfidence = readBool(),
-              let offAir = readBool()
-        else { return nil }
+        guard let clientId = readUTF8String() else { return nil }
+        let isNew         = readBool() ?? true
+        guard let time       = readUInt32() else { return nil }
+        guard let snr        = readInt32() else { return nil }
+        guard let deltaTime  = readDouble() else { return nil }
+        guard let deltaFreq  = readUInt32() else { return nil }
+        guard let mode       = readUTF8String() else { return nil }
+        guard let message    = readUTF8String() else { return nil }
+        let lowConfidence = readBool() ?? false
+        let offAir        = readBool() ?? false
 
         return WSJTXDecode(
             clientId: clientId,
