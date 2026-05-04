@@ -83,16 +83,40 @@ struct MenuBarLabel: View {
     }
 
     private static func loadImage() -> NSImage? {
+        // Try via the SwiftPM resource sub-bundle's own Bundle, which knows
+        // its internal layout (Contents/Resources/) regardless of how the
+        // outer .app was packaged.
+        var subBundleImage: NSImage? = nil
+        if let subBundleURL = Bundle.main.url(
+                forResource: "DXClusterAggregator_DXClusterAggregator",
+                withExtension: "bundle"),
+           let subBundle = Bundle(url: subBundleURL),
+           let url = subBundle.url(forResource: "MenuBarIcon", withExtension: "png"),
+           let img = NSImage(contentsOf: url) {
+            subBundleImage = img
+        }
+
         let candidates: [URL?] = [
-            // SwiftPM-generated resource bundle in .app Resources
+            // Directly in main bundle Resources (if copied loose)
+            Bundle.main.url(forResource: "MenuBarIcon", withExtension: "png"),
+            // SwiftPM old layout — bundle as a flat directory of files
             Bundle.main.url(
-                forResource: "MenuBarIcon",
-                withExtension: "png",
+                forResource: "MenuBarIcon", withExtension: "png",
                 subdirectory: "DXClusterAggregator_DXClusterAggregator.bundle"
             ),
-            // Directly in main bundle (if we copied it into Resources/)
-            Bundle.main.url(forResource: "MenuBarIcon", withExtension: "png"),
+            // SwiftPM newer layout — bundle is a proper macOS bundle with
+            // its own Contents/Resources/
+            Bundle.main.url(
+                forResource: "MenuBarIcon", withExtension: "png",
+                subdirectory: "DXClusterAggregator_DXClusterAggregator.bundle/Contents/Resources"
+            ),
             // Fallback: look next to the executable (for `swift run`)
+            {
+                let exe = Bundle.main.executableURL?.deletingLastPathComponent()
+                return exe?.appendingPathComponent(
+                    "DXClusterAggregator_DXClusterAggregator.bundle/Contents/Resources/MenuBarIcon.png"
+                )
+            }(),
             {
                 let exe = Bundle.main.executableURL?.deletingLastPathComponent()
                 return exe?.appendingPathComponent(
@@ -100,6 +124,12 @@ struct MenuBarLabel: View {
                 )
             }()
         ]
+
+        if let img = subBundleImage {
+            img.isTemplate = true
+            img.size = NSSize(width: 18, height: 18)
+            return img
+        }
 
         for url in candidates {
             if let url = url, FileManager.default.fileExists(atPath: url.path),

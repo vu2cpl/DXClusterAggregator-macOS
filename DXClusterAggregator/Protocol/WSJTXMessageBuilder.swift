@@ -27,11 +27,16 @@ struct WSJTXMessageBuilder {
                            clientId: String = defaultClientId,
                            timeMillis: UInt32? = nil,
                            deltaTime: Double = 0.0) -> (status: Data, decode: Data) {
+        // deCall is "the operator's own call" in WSJT-X's protocol. If we
+        // put the DX callsign here, downstream tools like RUMlog see Status
+        // saying "I'm RA9ACA" + Decode containing "RA9ACA" and treat the
+        // pair as the operator's own loop-back, suppressing the spot. Use a
+        // fixed identity so receivers always treat decodes as "heard others."
         let status = encodeStatus(
             clientId: clientId,
             dialFrequency: frequencyHz,
             mode: mode,
-            deCall: callsign
+            deCall: "DXCAGGR"
         )
         let decode = encodeDecode(
             clientId: clientId,

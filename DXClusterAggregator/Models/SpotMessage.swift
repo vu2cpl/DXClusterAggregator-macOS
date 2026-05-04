@@ -35,25 +35,32 @@ struct SpotMessage: Identifiable {
     }
 
     var dxCallsign: String? {
-        // FT8 message formats:
-        // "CQ DX_CALL GRID"
-        // "CQ NA DX_CALL GRID"  (directed CQ)
-        // "DE_CALL DX_CALL REPORT"
-        // "DE_CALL DX_CALL RRR"
-        // "DE_CALL DX_CALL 73"
+        // FT8 message formats we care about:
+        //   "CQ DX_CALL GRID"
+        //   "CQ NA DX_CALL GRID"           (directed CQ)
+        //   "DE_CALL DX_CALL REPORT|RR73|73|GRID"
+        //   "<HASHED> CALL REPORT"         (one side hashed)
+        // We spot whichever token in positions 0/1 looks like a real callsign,
+        // skipping placeholder tokens like RR73, 73, R+05, grids (LL85), etc.
         let parts = message.split(separator: " ").map(String.init)
         guard parts.count >= 2 else { return nil }
 
         if parts[0].uppercased() == "CQ" {
-            // CQ message: "CQ CALL GRID" or "CQ XX CALL GRID"
-            if parts.count >= 3, parts[1].count <= 2 || parts[1].allSatisfy({ $0.isNumber }) == false && parts[1].count <= 4 && !looksLikeCallsign(parts[1]) {
-                // Directed CQ like "CQ NA K1JT FN20"
-                return parts.count >= 3 ? parts[2] : nil
+            // "CQ CALL GRID" or "CQ XX CALL GRID" (XX = directional like NA, DX, EU)
+            if parts.count >= 3, !looksLikeCallsign(parts[1]) {
+                return looksLikeCallsign(parts[2]) ? Self.stripCallDecoration(parts[2]) : nil
             }
-            return parts[1]
-        } else if parts.count >= 2 {
-            // Standard QSO: "DE_CALL DX_CALL ..."
-            return parts[1]
+            return looksLikeCallsign(parts[1]) ? Self.stripCallDecoration(parts[1]) : nil
+        }
+
+        // Two-station exchange. Prefer parts[1] (the calling/transmitting
+        // station — the one this spotter is hearing), fall back to parts[0]
+        // if parts[1] is decoration (hashed/placeholder/grid/report).
+        if looksLikeCallsign(parts[1]) {
+            return Self.stripCallDecoration(parts[1])
+        }
+        if looksLikeCallsign(parts[0]) {
+            return Self.stripCallDecoration(parts[0])
         }
         return nil
     }
@@ -62,9 +69,56 @@ struct SpotMessage: Identifiable {
         message.uppercased().hasPrefix("CQ ")
     }
 
+    /// Strip `<>` brackets used by WSJT-X for hashed/known callsigns so the
+    /// cluster line shows just `K1JT` instead of `<K1JT>`.
+    private static func stripCallDecoration(_ s: String) -> String {
+        var t = s
+        if t.hasPrefix("<") { t.removeFirst() }
+        if t.hasSuffix(">") { t.removeLast() }
+        return t
+    }
+
+    /// Reject FT8 tokens that aren't callsigns: RR73 / RRR / 73 / TU /
+    /// signal reports (R+05, -12, +03) / 4-char Maidenhead grids (LL85) /
+    /// hashed-call placeholder `<...>`.
     private func looksLikeCallsign(_ s: String) -> Bool {
-        // Callsigns have at least one digit and one letter
-        s.contains(where: { $0.isNumber }) && s.contains(where: { $0.isLetter }) && s.count >= 3
+        let upper = s.uppercased()
+        let core: String = {
+            var t = upper
+            if t.hasPrefix("<") { t.removeFirst() }
+            if t.hasSuffix(">") { t.removeLast() }
+            return t
+        }()
+        if core.isEmpty || core == "..." { return false }
+        if core.count < 3 || core.count > 11 { return false }
+
+        let blacklist: Set<String> = ["RR73", "RRR", "73", "TU", "TNX", "QSL", "DE", "TEST", "CQ"]
+        if blacklist.contains(core) { return false }
+
+        // Signal reports: R+05, R-12, +05, -12
+        if core.hasPrefix("R+") || core.hasPrefix("R-") { return false }
+        if core.hasPrefix("+") || core.hasPrefix("-") {
+            if core.dropFirst().allSatisfy({ $0.isNumber }) { return false }
+        }
+
+        // 4-char Maidenhead grid: 2 letters + 2 digits
+        if core.count == 4 {
+            let c = Array(core)
+            if c[0].isLetter && c[1].isLetter && c[2].isNumber && c[3].isNumber {
+                return false
+            }
+        }
+
+        // Real callsigns: letter+digit+letter pattern, allow / for portable.
+        let hasDigit = core.contains { $0.isNumber }
+        let hasLetter = core.contains { $0.isLetter }
+        guard hasDigit && hasLetter else { return false }
+
+        // Reject pure-numeric-suffix tokens like "R549", "R-09" already handled,
+        // but also catch "599KW" style by requiring the call form: at most one
+        // '/' and only [A-Z0-9/].
+        let allowed = core.allSatisfy { $0.isLetter || $0.isNumber || $0 == "/" }
+        return allowed
     }
 
     var timeString: String {
