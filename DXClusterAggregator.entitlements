@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Outgoing HTTP (ClubLog cty.xml + ADIF, LoTW CSV, Telegram bot API) -->
+    <key>com.apple.security.network.client</key><true/>
+
+    <!-- Incoming UDP (WSJT-X / JTDX listener) and TCP server (port 7575) -->
+    <key>com.apple.security.network.server</key><true/>
+</dict>
+</plist>
