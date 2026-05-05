@@ -1,22 +1,70 @@
 import SwiftUI
 import AppKit
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    /// The single SwiftUI WindowGroup window we manage. Other entries in
+    /// NSApp.windows (MenuBarExtra status item, SwiftUI auxiliary scenes)
+    /// must not be touched — bringing them up was producing two windows
+    /// on Dock click.
+    fileprivate weak var mainWindow: NSWindow?
+
+    /// Singleton reference so static helpers (WindowManager) can find the
+    /// tracked main window without re-scanning NSApp.windows.
+    static fileprivate weak var shared: AppDelegate?
+
+    override init() {
+        super.init()
+        AppDelegate.shared = self
+    }
+
     /// Closing the last window only hides the app — keep running so the menu bar
     /// item stays available and monitoring continues.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return false
     }
 
+    /// Once SwiftUI has built our WindowGroup window, intercept its close
+    /// button so it hides instead of being released. Without this, the
+    /// red-X destroys the SwiftUI scene and dock-click / menu-bar "Show
+    /// Window" can't bring it back — the window list is empty.
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in
+            self?.attachToMainWindow()
+        }
+    }
+
+    @discardableResult
+    fileprivate func attachToMainWindow() -> NSWindow? {
+        if let existing = mainWindow { return existing }
+        // Pick the first "real" content window — has a title bar and can
+        // become main. MenuBarExtra status item is borderless / utility.
+        guard let win = NSApp.windows.first(where: { window in
+            window.canBecomeMain && window.styleMask.contains(.titled)
+        }) else {
+            return nil
+        }
+        win.isReleasedWhenClosed = false
+        win.delegate = self
+        mainWindow = win
+        return win
+    }
+
+    /// Hide the window instead of letting AppKit close+release it.
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        sender.orderOut(nil)
+        return false
+    }
+
     /// Re-show the main window when the user clicks the Dock icon.
+    /// Returning `false` suppresses AppKit's default reopen behaviour
+    /// (which would create a SECOND new window on top of ours).
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag {
-            for window in sender.windows {
-                window.makeKeyAndOrderFront(nil)
-            }
+            let win = mainWindow ?? attachToMainWindow()
+            win?.makeKeyAndOrderFront(nil)
         }
         NSApp.activate(ignoringOtherApps: true)
-        return true
+        return false
     }
 }
 
@@ -27,11 +75,12 @@ enum WindowManager {
     }
 
     static func showMainWindow() {
-        NSApp.unhide(nil)
         NSApp.activate(ignoringOtherApps: true)
-        for window in NSApp.windows {
-            window.makeKeyAndOrderFront(nil)
-        }
+        // Use the same tracked main-window reference the AppDelegate uses
+        // for Dock-click reopen. Filtering NSApp.windows by style flags is
+        // unreliable when the window has been order-out'd.
+        let win = AppDelegate.shared?.mainWindow ?? AppDelegate.shared?.attachToMainWindow()
+        win?.makeKeyAndOrderFront(nil)
     }
 }
 

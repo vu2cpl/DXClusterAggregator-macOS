@@ -119,7 +119,7 @@ struct ContentView: View {
             }
             .help("Collapse the settings panel for more space")
 
-            Text("v1.7.1 (macOS)")
+            Text("v1.7.2 (macOS)")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
