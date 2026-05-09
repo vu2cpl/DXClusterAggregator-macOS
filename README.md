@@ -220,4 +220,4 @@ See the [User Manual (PDF)](DXClusterAggregator_UserManual.pdf) for detailed ins
 
 ## License
 
-This project is shared for amateur radio use. 73!
+Released under the [MIT License](LICENSE) — free to use, modify, and redistribute. Shared for amateur radio use. 73!
