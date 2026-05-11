@@ -199,17 +199,41 @@ class DXClusterClient: ObservableObject {
     private func handleAuth(_ line: String) {
         let lower = line.lowercased()
 
-        // Detect login/callsign prompt
-        if !sentUsername && (lower.contains("login") || lower.contains("call") ||
-            lower.contains("please enter your call") || lower.contains("your callsign") ||
-            lower.contains("enter your callsign") || lower.hasSuffix(":") || lower.hasSuffix(">")) {
+        // Detect login/callsign prompt.
+        //
+        // Two guards to avoid misfiring on welcome-banner lines that happen
+        // to mention "login" or "call" (e.g. N2WQ sends "Last login: ... from"
+        // after a successful auth — a `contains("login")` match there would
+        // either re-send creds, or — on a fresh reconnect where the banner
+        // arrives before the real prompt — latch sentUsername=true against
+        // the wrong line and skip the actual prompt):
+        //   • length < 40 — real prompts are short; banner lines aren't
+        //   • hasSuffix(prompt) — confirms the cluster is waiting for input,
+        //     not just mentioning the word mid-sentence
+        if !sentUsername && lower.count < 40 && (
+            lower.hasSuffix("login:") ||
+            lower.hasSuffix("please login") ||
+            lower.hasSuffix("please login:") ||
+            lower.hasSuffix("call:") ||
+            lower.hasSuffix("callsign:") ||
+            lower.hasSuffix("callsign please:") ||
+            lower.hasSuffix("your callsign:") ||
+            lower.hasSuffix("enter your callsign:") ||
+            lower.hasSuffix("please enter your call:")
+        ) {
             sendLine(username)
             sentUsername = true
             return
         }
 
-        // Detect password prompt
-        if sentUsername && !sentPassword && (lower.contains("password") || lower.contains("passwd")) {
+        // Detect password prompt — same length+endsWith pattern as login.
+        if sentUsername && !sentPassword && lower.count < 40 && (
+            lower.hasSuffix("password:") ||
+            lower.hasSuffix("password please:") ||
+            lower.hasSuffix("passwd:") ||
+            lower.hasSuffix("enter password:") ||
+            lower.hasSuffix("enter your password:")
+        ) {
             if !password.isEmpty {
                 sendLine(password)
             }
