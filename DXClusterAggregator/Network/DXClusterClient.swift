@@ -154,9 +154,16 @@ class DXClusterClient: ObservableObject {
     private func receiveData() {
         connection?.receive(minimumIncompleteLength: 1, maximumLength: 4096) { [weak self] data, _, isComplete, error in
             if let data = data, !data.isEmpty {
-                if let text = String(data: data, encoding: .utf8) {
+                // Telnet-style clusters (e.g. N2WQ) prefix their banner with
+                // IAC option-negotiation bytes (0xFF ...). Strip them at the
+                // byte level so the resulting String isn't garbage and our
+                // prompt suffix-match isn't fighting binary noise.
+                let cleaned = Self.stripTelnetIAC(data)
+                if cleaned.isEmpty {
+                    // All bytes were IAC negotiation — nothing to process.
+                } else if let text = String(data: cleaned, encoding: .utf8) {
                     self?.processIncoming(text)
-                } else if let text = String(data: data, encoding: .ascii) {
+                } else if let text = String(data: cleaned, encoding: .ascii) {
                     self?.processIncoming(text)
                 }
             }
@@ -172,6 +179,68 @@ class DXClusterClient: ObservableObject {
             self?.receiveData()
         }
     }
+
+    /// Strip Telnet IAC option-negotiation sequences from a byte stream.
+    ///
+    /// Telnet (RFC 854) signals option negotiation with 0xFF (IAC) followed by
+    /// a command byte and, for WILL/WONT/DO/DONT, an option byte. Some DX
+    /// cluster front-ends (notably AR-Cluster forks like N2WQ-2) send an IAC
+    /// preamble such as `IAC WILL SUPPRESS-GA` + `IAC WILL ECHO` ahead of
+    /// their first banner/prompt. Those bytes are not valid UTF-8 and corrupt
+    /// the decoded string — and worse, if the prompt itself doesn't end with
+    /// a newline (it often doesn't — Telnet prompts hang), the IAC noise can
+    /// prevent any meaningful suffix match.
+    ///
+    /// We don't *respond* to the negotiation (clusters accept silent partners
+    /// fine). We just drop the bytes.
+    ///
+    /// Caveat: if a TCP segment ends mid-IAC-sequence, the trailing bytes are
+    /// dropped. In practice clusters emit the entire IAC preamble in one
+    /// initial segment, so this hasn't bitten us; revisit if a cluster
+    /// interleaves IAC commands later in the session.
+    static func stripTelnetIAC(_ data: Data) -> Data {
+        var out = Data()
+        var i = 0
+        while i < data.count {
+            let b = data[i]
+            if b == 0xFF {
+                guard i + 1 < data.count else { break } // incomplete trailing IAC
+                let next = data[i + 1]
+                switch next {
+                case 0xFF:             // IAC IAC → literal 0xFF
+                    out.append(0xFF); i += 2
+                case 0xFB...0xFE:      // WILL/WONT/DO/DONT + 1 option byte
+                    i += 3
+                case 0xFA:             // SB ... IAC SE (variable subnegotiation)
+                    var j = i + 2
+                    while j + 1 < data.count {
+                        if data[j] == 0xFF && data[j + 1] == 0xF0 { j += 2; break }
+                        j += 1
+                    }
+                    i = j
+                default:               // other 2-byte IAC commands (NOP, GA, etc.)
+                    i += 2
+                }
+            } else {
+                out.append(b); i += 1
+            }
+        }
+        return out
+    }
+
+    /// Suffix allowlist for prompts that may arrive without a trailing newline.
+    /// Used by both the line-based path (after newline trim) and the hanging-
+    /// prompt path (residual buffer at end of `processIncoming`).
+    private static let promptSuffixes: [String] = [
+        "login:", "please login", "please login:",
+        "call:", "callsign:", "callsign please:", "your callsign:",
+        "enter your callsign:", "please enter your call:"
+    ]
+
+    private static let passwordSuffixes: [String] = [
+        "password:", "password please:", "passwd:",
+        "enter password:", "enter your password:"
+    ]
 
     private func processIncoming(_ text: String) {
         buffer += text
@@ -194,6 +263,23 @@ class DXClusterClient: ObservableObject {
                 onSpot?(spot)
             }
         }
+
+        // Hanging-prompt path: Telnet-style prompts (e.g. N2WQ's `login: `)
+        // arrive without any newline terminator — the cluster expects us to
+        // type at a live prompt. The line-based loop above will sit on these
+        // forever waiting for an LF that never comes. If the residual buffer
+        // is short and ends with a recognized prompt, hand it off and consume.
+        if !authenticated && !buffer.isEmpty {
+            let pending = buffer.trimmingCharacters(in: .whitespacesAndNewlines)
+            let lower = pending.lowercased()
+            if pending.count < 40 && (
+                Self.promptSuffixes.contains(where: { lower.hasSuffix($0) }) ||
+                Self.passwordSuffixes.contains(where: { lower.hasSuffix($0) })
+            ) {
+                handleAuth(pending)
+                buffer = ""
+            }
+        }
     }
 
     private func handleAuth(_ line: String) {
@@ -210,30 +296,16 @@ class DXClusterClient: ObservableObject {
         //   • length < 40 — real prompts are short; banner lines aren't
         //   • hasSuffix(prompt) — confirms the cluster is waiting for input,
         //     not just mentioning the word mid-sentence
-        if !sentUsername && lower.count < 40 && (
-            lower.hasSuffix("login:") ||
-            lower.hasSuffix("please login") ||
-            lower.hasSuffix("please login:") ||
-            lower.hasSuffix("call:") ||
-            lower.hasSuffix("callsign:") ||
-            lower.hasSuffix("callsign please:") ||
-            lower.hasSuffix("your callsign:") ||
-            lower.hasSuffix("enter your callsign:") ||
-            lower.hasSuffix("please enter your call:")
-        ) {
+        if !sentUsername && lower.count < 40 &&
+            Self.promptSuffixes.contains(where: { lower.hasSuffix($0) }) {
             sendLine(username)
             sentUsername = true
             return
         }
 
         // Detect password prompt — same length+endsWith pattern as login.
-        if sentUsername && !sentPassword && lower.count < 40 && (
-            lower.hasSuffix("password:") ||
-            lower.hasSuffix("password please:") ||
-            lower.hasSuffix("passwd:") ||
-            lower.hasSuffix("enter password:") ||
-            lower.hasSuffix("enter your password:")
-        ) {
+        if sentUsername && !sentPassword && lower.count < 40 &&
+            Self.passwordSuffixes.contains(where: { lower.hasSuffix($0) }) {
             if !password.isEmpty {
                 sendLine(password)
             }
