@@ -1160,6 +1160,15 @@ struct ContentView: View {
         if let last = notificationCooldown[key], now.timeIntervalSince(last) < cooldown {
             return
         }
+        // Opportunistic cleanup so this dict can't grow without bound when
+        // auto-clear is disabled (autoClearMinutes == 0 skips pruneOldSpots).
+        // Mirrors the independent cap on rebroadcastCache. Entries older than
+        // the longest possible cooldown window (60 min) can't suppress
+        // anything, so dropping them is safe.
+        if notificationCooldown.count > 2000 {
+            let cutoff = now.addingTimeInterval(-60 * 60)
+            notificationCooldown = notificationCooldown.filter { $0.value >= cutoff }
+        }
         notificationCooldown[key] = now
 
         // Build message

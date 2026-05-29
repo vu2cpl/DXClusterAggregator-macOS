@@ -245,6 +245,19 @@ class DXClusterClient: ObservableObject {
     private func processIncoming(_ text: String) {
         buffer += text
 
+        // Safety cap: the line loop below only drains on a newline, and the
+        // hanging-prompt cleanup at the end is gated behind !authenticated. A
+        // peer that streams bytes without ever sending an LF would otherwise
+        // grow `buffer` without bound for the life of the session. Real cluster
+        // lines and prompts are short, so if we've accumulated this much with
+        // no newline it's junk — drop all but the tail (long enough to still
+        // catch any prompt suffix we match on).
+        let maxBufferBytes = 64 * 1024
+        if buffer.utf8.count > maxBufferBytes,
+           buffer.rangeOfCharacter(from: .newlines) == nil {
+            buffer = String(buffer.suffix(256))
+        }
+
         // Process complete lines
         while let newlineRange = buffer.rangeOfCharacter(from: .newlines) {
             let line = String(buffer[buffer.startIndex..<newlineRange.lowerBound])
