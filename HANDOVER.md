@@ -16,7 +16,7 @@ A native macOS (SwiftUI, menu-bar) app that aggregates FT8/FT4 spots from
 multiple WSJT-X / JTDX instances (incoming UDP) **and** DX Cluster telnet
 nodes into a single unified feed, then re-publishes that feed two ways:
 
-- a **built-in telnet DX-cluster server** (default port `7550`) that logging
+- a **built-in telnet DX-cluster server** (default port `7575`) that logging
   software (Logger32, N1MM+, Log4OM, DXKeeper, …) connects to, and
 - up to two **UDP broadcast destinations** (e.g. back out to RBN, or to
   another tool expecting WSJT-X UDP wire format).
@@ -32,7 +32,7 @@ Mode), LoTW-user marking, beacon detection, and macOS + Telegram notifications.
 |---|---|
 | Callsign | `VU2CPL` |
 | WSJT-X/JTDX UDP listen port | `2237` |
-| TCP cluster server port | `7550` |
+| TCP cluster server port | `7575` (NOT 7550 — avoids SkimSrv's 7300/7550 defaults) |
 | UDP Broadcast 1 | `127.0.0.1:2236` |
 | Auto-clear window | `60` min (0 = disabled) |
 | DX cluster auto-reconnect backoff | `10s → 30s → 60s → 120s → 300s` (last repeats) |

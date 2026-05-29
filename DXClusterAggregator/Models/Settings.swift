@@ -46,7 +46,10 @@ struct BroadcastDestination: Identifiable, Codable, Equatable {
 
 class AppSettings: ObservableObject {
     @AppStorage("callsign") var callsign: String = "VU2CPL"
-    @AppStorage("tcpClusterPort") var tcpClusterPort: Int = 7550
+    // 7575, deliberately NOT 7550: CW Skimmer Server (SkimSrv) on Windows
+    // defaults to 7300 and 7550, so 7575 avoids clashing with a co-running
+    // SkimSrv telnet feed. Do not "tidy" this back to 7550.
+    @AppStorage("tcpClusterPort") var tcpClusterPort: Int = 7575
     @AppStorage("broadcastIP1") var broadcastIP1: String = "127.0.0.1"
     @AppStorage("broadcastPort1") var broadcastPort1: Int = 2236
     /// Wire format for Broadcast Destination 1: "cluster" (DX cluster text)

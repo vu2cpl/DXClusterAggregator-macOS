@@ -39,7 +39,7 @@ The app runs standalone — all these are optional depending on which features y
 - **WSJT-X** and/or **JTDX** — recent version with UDP broadcast enabled, pointing at the aggregator's listen port (default `2237`)
 - **ClubLog account** with an **App Password** (Settings → App Passwords) and a **Developer API Key** ([request here](https://clublog.org/requestapikey.php)) — only needed for the alert/highlight features
 - **Telegram bot** (via @BotFather) + your Chat ID — only if you want Telegram push alerts
-- **Logging software** that connects to a telnet DX cluster (Logger32, N1MM+, Log4OM, DXKeeper, etc.) — point it at `127.0.0.1:7550` (or whatever port you configure)
+- **Logging software** that connects to a telnet DX cluster (Logger32, N1MM+, Log4OM, DXKeeper, etc.) — point it at `127.0.0.1:7575` (or whatever port you configure)
 
 ### Build-from-source Requirements
 
@@ -193,7 +193,7 @@ cp -r DXClusterAggregator.app /Applications/
 3. Configure UDP sources (default: WSJT-X on port 2237)
 4. Optionally add DX Cluster nodes
 5. Click **Start Monitoring**
-6. Connect your logging software to **127.0.0.1:7550** (telnet)
+6. Connect your logging software to **127.0.0.1:7575** (telnet)
 
 ## Default Configuration
 
@@ -201,8 +201,10 @@ cp -r DXClusterAggregator.app /Applications/
 |---------|---------|
 | Callsign | VU2CPL |
 | WSJT-X UDP Port | 2237 |
-| TCP Cluster Port | 7550 |
+| TCP Cluster Port | 7575 |
 | Broadcast 1 | 127.0.0.1:2236 |
+
+> **Why 7575?** CW Skimmer Server (SkimSrv) on Windows defaults to ports 7300 and 7550, so the aggregator's telnet server defaults to **7575** to avoid clashing when both run on the same network.
 
 ## Documentation
 

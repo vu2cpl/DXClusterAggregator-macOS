@@ -5,7 +5,8 @@
     <!-- Outgoing HTTP (ClubLog cty.xml + ADIF, LoTW CSV, Telegram bot API) -->
     <key>com.apple.security.network.client</key><true/>
 
-    <!-- Incoming UDP (WSJT-X / JTDX listener) and TCP cluster server (default port 7550) -->
+    <!-- Incoming UDP (WSJT-X / JTDX listener) and TCP cluster server
+         (default port 7575 — avoids SkimSrv's 7300/7550 defaults) -->
     <key>com.apple.security.network.server</key><true/>
 </dict>
 </plist>

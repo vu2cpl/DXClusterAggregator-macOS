@@ -730,7 +730,7 @@ def build_content():
     elements.append(Paragraph(
         "The app runs a built-in TCP telnet cluster server. Any logging software that supports "
         "connecting to a DX cluster via telnet can connect to this server to receive the aggregated "
-        "spot feed. The default port is <b>7550</b>.",
+        "spot feed. The default port is <b>7575</b>.",
         styles['Body']
     ))
     elements.append(Paragraph(
@@ -742,7 +742,7 @@ def build_content():
         styles['BulletItem']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> <b>Port:</b> 7550 (or whatever you configured)",
+        "<bullet>&bull;</bullet> <b>Port:</b> 7575 (or whatever you configured)",
         styles['BulletItem']
     ))
     elements.append(Paragraph(
@@ -1083,7 +1083,7 @@ def build_content():
         styles['BulletItem']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> Set Host to <b>127.0.0.1</b> and Port to <b>7550</b>",
+        "<bullet>&bull;</bullet> Set Host to <b>127.0.0.1</b> and Port to <b>7575</b>",
         styles['BulletItem']
     ))
     elements.append(Paragraph(
@@ -1097,7 +1097,7 @@ def build_content():
         styles['BulletItem']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> Enter <b>127.0.0.1:7550</b> as the cluster address",
+        "<bullet>&bull;</bullet> Enter <b>127.0.0.1:7575</b> as the cluster address",
         styles['BulletItem']
     ))
 
@@ -1107,7 +1107,7 @@ def build_content():
         styles['BulletItem']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> Add a new cluster with address <b>127.0.0.1</b> port <b>7550</b>",
+        "<bullet>&bull;</bullet> Add a new cluster with address <b>127.0.0.1</b> port <b>7575</b>",
         styles['BulletItem']
     ))
 
@@ -1116,7 +1116,7 @@ def build_content():
         "You can also test the cluster server using a terminal:",
         styles['Body']
     ))
-    elements.append(Paragraph("telnet 127.0.0.1 7550", styles['CodeBlock']))
+    elements.append(Paragraph("telnet 127.0.0.1 7575", styles['CodeBlock']))
 
     # Chapter 11: Troubleshooting
     elements.append(PageBreak())
@@ -1142,7 +1142,7 @@ def build_content():
          'or run: xattr -cr /path/to/DXClusterAggregator.app'],
         ['Logging software cannot connect',
          'Ensure monitoring is started (green "Start Monitoring" button). Verify the TCP '
-         'cluster port (default 7550) is not blocked by a firewall. Check that the port '
+         'cluster port (default 7575) is not blocked by a firewall. Check that the port '
          'is not already in use by another application.'],
         ['Port already in use',
          'Another application is using the same port. Either close that application or '

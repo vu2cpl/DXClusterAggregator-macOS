@@ -141,7 +141,7 @@ struct ContentView: View {
 
                 HStack {
                     Text("TCP Cluster Port:")
-                    TextField("7550", text: settings.tcpClusterPortString)
+                    TextField("7575", text: settings.tcpClusterPortString)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 70)
                 }
