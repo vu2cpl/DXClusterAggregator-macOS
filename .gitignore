@@ -12,3 +12,9 @@ AppIcon.iconset/
 # per version and attached to GitHub Releases (see HANDOVER.md).
 DXClusterAggregator.app/
 DXClusterAggregator-*.zip
+
+# Local Claude harness state (worktrees, session data) — never tracked.
+.claude/
+
+# Original Windows reference binary — kept locally, not part of the macOS app.
+FT8ClusterAggregator.exe
