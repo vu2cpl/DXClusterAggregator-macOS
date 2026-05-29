@@ -5,7 +5,7 @@
     <!-- Outgoing HTTP (ClubLog cty.xml + ADIF, LoTW CSV, Telegram bot API) -->
     <key>com.apple.security.network.client</key><true/>
 
-    <!-- Incoming UDP (WSJT-X / JTDX listener) and TCP server (port 7575) -->
+    <!-- Incoming UDP (WSJT-X / JTDX listener) and TCP cluster server (default port 7550) -->
     <key>com.apple.security.network.server</key><true/>
 </dict>
 </plist>

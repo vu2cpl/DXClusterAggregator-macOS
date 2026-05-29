@@ -6,3 +6,9 @@ DerivedData/
 *.pyc
 __pycache__/
 AppIcon.iconset/
+
+# Built app bundle and release archives are NOT tracked.
+# The repo is the source of truth; releases are built + notarised fresh
+# per version and attached to GitHub Releases (see HANDOVER.md).
+DXClusterAggregator.app/
+DXClusterAggregator-*.zip

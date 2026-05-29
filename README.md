@@ -53,23 +53,19 @@ Only needed if you're compiling the app yourself; end users don't need these.
 
 ### Option 1: Download Pre-built App
 
-1. Download `DXClusterAggregator.app` from [Releases](https://github.com/vu2cpl/DXClusterAggregator-macOS/releases)
-2. Move it to your Applications folder (or anywhere you like)
-3. **Important — First launch on macOS:**
+1. Download the release `.zip` from [Releases](https://github.com/vu2cpl/DXClusterAggregator-macOS/releases) and unzip it
+2. Move `DXClusterAggregator.app` to your Applications folder (or anywhere you like)
+3. Double-click to launch
 
-   Since the app is not notarised through the Apple Developer Program, macOS will block it by default. To fix this, open Terminal and run:
+   Release builds are signed and **notarised** with an Apple Developer ID (hardened runtime), so Gatekeeper accepts them and they open normally — no Terminal workaround needed.
 
-   ```bash
-   xattr -cr /path/to/DXClusterAggregator.app
-   ```
+   **Fallback:** if macOS still blocks it (e.g. an unstapled build, or a copy someone built from source themselves), run:
 
-   For example, if you placed it in Applications:
    ```bash
    xattr -cr /Applications/DXClusterAggregator.app
    ```
 
-4. Right-click the app and select **"Open"** (not double-click) for the first launch
-5. After the first launch, it will open normally with a double-click
+   then right-click the app and select **"Open"** for the first launch.
 
 ### Option 2: Build from Source and Create .app Bundle
 
@@ -143,9 +139,9 @@ cat > DXClusterAggregator.app/Contents/Info.plist << 'EOF'
     <key>CFBundleIdentifier</key>
     <string>com.vu2cpl.dxclusteraggregator</string>
     <key>CFBundleVersion</key>
-    <string>1.2.0</string>
+    <string>1.7.5</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.2.0</string>
+    <string>1.7.5</string>
     <key>CFBundleExecutable</key>
     <string>DXClusterAggregator</string>
     <key>CFBundlePackageType</key>

@@ -231,7 +231,7 @@ def build_cover():
     elements.append(Spacer(1, 8 * mm))
     elements.append(Paragraph("User Manual", styles['CoverSubtitle']))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(Paragraph("Version 1.7.4", styles['CoverVersion']))
+    elements.append(Paragraph("Version 1.7.5", styles['CoverVersion']))
     elements.append(Spacer(1, 30 * mm))
 
     elements.append(Paragraph("Aggregate FT8/FT4 spots from multiple WSJT-X/JTDX instances", styles['Credits']))
@@ -395,16 +395,19 @@ def build_content():
         styles['BulletItem']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> On first launch, macOS may show a security warning since the app is not notarised",
+        "<bullet>&bull;</bullet> Release builds are signed and notarised with an Apple Developer ID "
+        "(hardened runtime), so they open normally on a double-click — no Gatekeeper workaround needed",
         styles['BulletItem']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> Go to <b>System Settings > Privacy & Security</b> and click <b>\"Open Anyway\"</b>",
+        "<bullet>&bull;</bullet> <b>Fallback only</b> (e.g. an unstapled build, or a copy built from source): "
+        "go to <b>System Settings > Privacy & Security</b> and click <b>\"Open Anyway\"</b>",
         styles['BulletItem']
     ))
 
     elements.append(Paragraph(
-        "Alternatively, open Terminal and run the following command to bypass Gatekeeper:",
+        "If Gatekeeper still blocks a self-built copy, open Terminal and run the following to clear the "
+        "quarantine attribute:",
         styles['Body']
     ))
     elements.append(Paragraph("xattr -cr /path/to/DXClusterAggregator.app", styles['CodeBlock']))
@@ -453,7 +456,7 @@ def build_content():
         ['CFBundleName', 'DXClusterAggregator'],
         ['CFBundleDisplayName', 'DX Cluster Aggregator'],
         ['CFBundleIdentifier', 'com.vu2cpl.dxclusteraggregator'],
-        ['CFBundleVersion', '1.2.0'],
+        ['CFBundleVersion', '1.7.5'],
         ['CFBundleExecutable', 'DXClusterAggregator'],
         ['CFBundlePackageType', 'APPL'],
         ['CFBundleIconFile', 'AppIcon'],
@@ -1134,8 +1137,9 @@ def build_content():
          'The cluster node may be unreachable or the DNS lookup failed. Try using an IP '
          'address instead of a hostname.'],
         ['macOS security warning on launch',
-         'Go to System Settings > Privacy & Security and click "Open Anyway". This is '
-         'needed because the app is not notarised through the Apple Developer Program.'],
+         'Official notarised releases open normally. This warning only appears for self-built '
+         '(ad-hoc signed) copies - go to System Settings > Privacy & Security and click "Open Anyway", '
+         'or run: xattr -cr /path/to/DXClusterAggregator.app'],
         ['Logging software cannot connect',
          'Ensure monitoring is started (green "Start Monitoring" button). Verify the TCP '
          'cluster port (default 7550) is not blocked by a firewall. Check that the port '
