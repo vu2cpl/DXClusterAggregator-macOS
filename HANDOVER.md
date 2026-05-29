@@ -10,6 +10,21 @@ the in-app About line.
 
 ---
 
+## Working directory
+
+**Canonical:** `/Users/manoj/projects/DXClusterAggregator/` — the real checkout
+(live `.git`, sources, build artifacts). The folder was historically named
+`FT8ClusterAggregator`, since renamed to match the project; the GitHub repo was
+likewise renamed from `FT8ClusterAggregator-macOS` (old URL still
+301-redirects). If a stale stub reappears at
+`~/Documents/Claude/code/FT8ClusterAggregator/`, ignore it — it was deleted.
+
+> Claude sessions run in a git worktree under `.claude/worktrees/…` and push to
+> `origin/main`. The canonical checkout above must `git pull` to catch up —
+> delete any untracked file that would block the merge first.
+
+---
+
 ## What it is
 
 A native macOS (SwiftUI, menu-bar) app that aggregates FT8/FT4 spots from
@@ -160,6 +175,23 @@ committed to the repo (see conventions below).
 
 ---
 
+## Integration & operating notes
+
+- **RUMlog has two separate listening modes — don't confuse them:**
+  - *WSJT-X port* (e.g. 2347) = QSO-logging integration; it listens for
+    `QSO Logged` (type 5) messages only and ignores decode-derived spots, so
+    sending Status+Decode pairs there is pointless.
+  - *DX Cluster tab* = a TCP cluster client. Point it at our local cluster
+    server (`127.0.0.1:7575`) to get spots in RUMlog's DX Spots window — this
+    is the right path for cluster spots.
+- **Single-session-per-callsign clusters** (e.g. N2WQ allow one login per
+  call). If your call is already connected from another client, set the
+  cluster row's **Username** to `CALLSIGN-N` (any AX.25 SSID `-1`…`-15`); the
+  cluster treats it as a distinct user. No code change — `username` is
+  free-form. (Manoj uses `VU2CPL-2` for N2WQ.)
+
+---
+
 ## Known gotchas
 
 - **SDK-26 launch failure (Tahoe).** Building with the system-default SDK 26
@@ -192,4 +224,9 @@ committed to the repo (see conventions below).
 
 ## Open items
 
-- _(none tracked at v1.7.5)_ — add here as they surface.
+- `SpotMessage.dxCallsign`'s `looksLikeCallsign` heuristic is defensive but not
+  exhaustive — pathological FT8 messages could still slip a non-call into the
+  callsign column. Revisit if a user reports it.
+- `stripTelnetIAC` drops trailing partial IAC sequences that span packet
+  boundaries. Harmless in practice (clusters emit the IAC preamble in one
+  initial segment); revisit if a cluster interleaves IAC commands mid-session.
