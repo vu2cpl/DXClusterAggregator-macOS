@@ -130,6 +130,21 @@ class AppSettings: ObservableObject {
     }
 
     init() {
+        // One-time migration: the TCP cluster server default was mistakenly
+        // 7550, which clashes with SkimSrv's 7300/7550 defaults. Bump a stored
+        // 7550 to the intended 7575 exactly once — guarded by a flag so a user
+        // who later deliberately re-selects 7550 keeps it. Fresh installs have
+        // no stored key (they get 7575 from the @AppStorage default) and are
+        // left untouched.
+        let defaults = UserDefaults.standard
+        if !defaults.bool(forKey: "didMigrateClusterPort7575") {
+            if defaults.object(forKey: "tcpClusterPort") != nil,
+               defaults.integer(forKey: "tcpClusterPort") == 7550 {
+                defaults.set(7575, forKey: "tcpClusterPort")
+            }
+            defaults.set(true, forKey: "didMigrateClusterPort7575")
+        }
+
         self.udpSources = Self.loadCodable(key: "udpSources") ?? UDPSource.defaultSources
         self.dxClusterSources = Self.loadCodable(key: "dxClusterSources") ?? []
         self.clubLog = Self.loadCodable(key: "clubLogConfig") ?? ClubLogConfig()

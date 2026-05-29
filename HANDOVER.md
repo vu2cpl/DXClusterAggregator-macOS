@@ -84,9 +84,10 @@ launch on macOS 15 (Sequoia) and earlier — this has bitten before.
 ### 1. Universal release build (SDK-15 pinned)
 
 ```bash
-SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk \
+SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk \
   swift build -c release --arch arm64 --arch x86_64
 # universal binary lands in .build/apple/Products/Release/ (NOT .build/release/)
+# (15.4 is canonical; MacOSX15.sdk also works — any macOS 15 SDK, NOT 26.)
 ```
 
 ### 2. Assemble the `.app` bundle
@@ -106,27 +107,25 @@ codesign --force --deep --sign - DXClusterAggregator.app
 Ad-hoc-signed apps are **not** notarised — opening one needs
 `xattr -cr <app>` + right-click → Open. Fine for local testing.
 
-### 3b. Release — Developer ID sign + notarise + staple
+### 3b. Release — `./notarize.sh`
 
-Releases ARE notarised (hardened runtime + `DXClusterAggregator.entitlements`).
-This step needs Manoj's Apple Developer ID and a stored `notarytool`
-keychain profile — **it cannot be done by an automated agent.**
+The whole release pipeline is scripted. From a clean checkout:
 
 ```bash
-codesign --force --options runtime --timestamp \
-  --entitlements DXClusterAggregator.entitlements \
-  --sign "Developer ID Application: <your name> (<TEAMID>)" \
-  DXClusterAggregator.app
-
-ditto -c -k --keepParent DXClusterAggregator.app \
-  DXClusterAggregator-<version>-notarized-universal.zip
-
-xcrun notarytool submit DXClusterAggregator-<version>-notarized-universal.zip \
-  --keychain-profile "<notary-profile>" --wait
-
-xcrun stapler staple DXClusterAggregator.app
-# re-zip the stapled .app for distribution
+./notarize.sh 1.7.5     # version arg; omit if the .app already carries it
 ```
+
+`notarize.sh` builds the universal binary (SDK-15 pinned), assembles the
+`.app` (writing `Info.plist` with the given version), Developer-ID signs it
+with hardened runtime + `DXClusterAggregator.entitlements`, submits to Apple's
+notary service, staples the ticket, verifies, and emits
+`DXClusterAggregator-<version>-notarized-universal.zip`.
+
+Prereq: the `notarytool` credentials must be stored once as keychain profile
+**`DXC-NOTARY`** (`xcrun notarytool store-credentials DXC-NOTARY …`). Manoj's
+Developer ID is `Developer ID Application: Manoj Ramawarrier (CHVNJ85C9F)`.
+With the profile stored the run is non-interactive. (The script's defaults are
+overridable via the `DEV_ID` / `NOTARY_PROFILE` / `SDK` env vars.)
 
 ### 4. Distribute
 
@@ -178,9 +177,12 @@ committed to the repo (see conventions below).
 
 - **v1.7.5** — Memory hardening: independent size caps on `notificationCooldown`
   and the `DXClusterClient` line buffer so neither grows unbounded during long
-  uptime with auto-clear disabled. Stopped tracking built artifacts; docs
-  (README, PDF manual, entitlements comment) brought in sync; this HANDOVER
-  added.
+  uptime with auto-clear disabled. Fixed the default TCP cluster port
+  (`7550 → 7575`, avoids SkimSrv's 7300/7550 clash) with a one-time launch
+  migration (`didMigrateClusterPort7575` flag) that bumps an existing stored
+  7550. Stopped tracking built artifacts; added `notarize.sh` (scripted
+  release pipeline); docs (README, PDF manual, entitlements comment) brought
+  in sync; this HANDOVER added.
 - **v1.7.4** — Telnet IAC stripping + hanging-prompt support (N2WQ fix).
 - **v1.7.3** — Tighter cluster login/password prompt detection.
 - **v1.7.2** — Fix red-X close → main window couldn't be reopened.
