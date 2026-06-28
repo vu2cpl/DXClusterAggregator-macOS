@@ -5,7 +5,7 @@ to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
 **Current version:** v1.7.6
-**Last updated:** 2026-05-30
+**Last updated:** 2026-06-28
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
