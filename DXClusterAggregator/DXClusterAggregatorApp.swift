@@ -61,6 +61,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag {
             let win = mainWindow ?? attachToMainWindow()
+            // If the window is sitting in the Dock as a miniaturized thumbnail,
+            // makeKeyAndOrderFront alone won't restore it — it only reorders
+            // the z-stack. Deminiaturize first.
+            if win?.isMiniaturized == true { win?.deminiaturize(nil) }
             win?.makeKeyAndOrderFront(nil)
         }
         NSApp.activate(ignoringOtherApps: true)
@@ -80,6 +84,11 @@ enum WindowManager {
         // for Dock-click reopen. Filtering NSApp.windows by style flags is
         // unreliable when the window has been order-out'd.
         let win = AppDelegate.shared?.mainWindow ?? AppDelegate.shared?.attachToMainWindow()
+        // If the user minimised the window to the Dock, makeKeyAndOrderFront
+        // alone only reorders z-stack and leaves the thumbnail in the Dock.
+        // Deminiaturize first so the menu-bar "Show Window" actually restores
+        // it. (Yellow-button minimise does not go through windowShouldClose.)
+        if win?.isMiniaturized == true { win?.deminiaturize(nil) }
         win?.makeKeyAndOrderFront(nil)
     }
 }

@@ -4,7 +4,7 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.7.5
+**Current version:** v1.7.6
 **Last updated:** 2026-05-30
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
@@ -207,6 +207,11 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
+- **v1.7.6** — Fix minimised-window restore: both `WindowManager.showMainWindow`
+  and `applicationShouldHandleReopen` now call `deminiaturize(nil)` when the
+  window is sitting in the Dock as a thumbnail. Previously `makeKeyAndOrderFront`
+  alone only reordered z-stack, leaving the window minimised — the menu-bar
+  "Show Window" entry appeared to do nothing.
 - **v1.7.5** — Memory hardening: independent size caps on `notificationCooldown`
   and the `DXClusterClient` line buffer so neither grows unbounded during long
   uptime with auto-clear disabled. Fixed the default TCP cluster port

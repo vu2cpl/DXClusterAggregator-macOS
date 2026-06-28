@@ -231,7 +231,7 @@ def build_cover():
     elements.append(Spacer(1, 8 * mm))
     elements.append(Paragraph("User Manual", styles['CoverSubtitle']))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(Paragraph("Version 1.7.5", styles['CoverVersion']))
+    elements.append(Paragraph("Version 1.7.6", styles['CoverVersion']))
     elements.append(Spacer(1, 30 * mm))
 
     elements.append(Paragraph("Aggregate FT8/FT4 spots from multiple WSJT-X/JTDX instances", styles['Credits']))
@@ -456,7 +456,7 @@ def build_content():
         ['CFBundleName', 'DXClusterAggregator'],
         ['CFBundleDisplayName', 'DX Cluster Aggregator'],
         ['CFBundleIdentifier', 'com.vu2cpl.dxclusteraggregator'],
-        ['CFBundleVersion', '1.7.5'],
+        ['CFBundleVersion', '1.7.6'],
         ['CFBundleExecutable', 'DXClusterAggregator'],
         ['CFBundlePackageType', 'APPL'],
         ['CFBundleIconFile', 'AppIcon'],
