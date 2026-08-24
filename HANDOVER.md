@@ -4,7 +4,7 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.0
+**Current version:** v1.8.1
 **Last updated:** 2026-08-24
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
@@ -215,6 +215,20 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
+- **v1.8.1** — Status cell → clickable pill (operator feedback on v1.8.0:
+  fonts too small; wanted the shack Vue dashboard's pill style — indicator
+  and button in one). `ClusterStatusCell` is now a tinted capsule (11.5 pt
+  semibold mono, up from `.caption2`) whose colour carries the state
+  (green proven-live / yellow unproven / orange down) and whose text carries
+  the activity — live pills show "count · last-spot age" (self-updating,
+  count compacted ≥1k), yellow shows "no spots", orange shows
+  "connecting"/"retry Ns" (compacted from the fuller `statusText`, which
+  the hover tooltip still shows in full). **Clicking the pill drops the
+  session and redials immediately** (`DXClusterClient.recycleNow()` —
+  resets backoff, no-op when monitoring is stopped); status column widened
+  120 → 135. v1.8.0's watchdog was verified live before this: VE7CC's
+  dead-login session was auto-recycled (source port rotated) exactly on
+  schedule. Manual §6.2 rewritten around the pill; PDF regenerated.
 - **v1.8.0** — Honest cluster status + self-healing sessions. Motivated by the
   2026-08-24 VE7CC outage (its login layer went silently dead: TCP + banner
   fine, every callsign ignored) — the app showed "Connected" for a session

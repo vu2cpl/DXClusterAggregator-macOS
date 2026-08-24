@@ -231,7 +231,7 @@ def build_cover():
     elements.append(Spacer(1, 8 * mm))
     elements.append(Paragraph("User Manual", styles['CoverSubtitle']))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(Paragraph("Version 1.8.0", styles['CoverVersion']))
+    elements.append(Paragraph("Version 1.8.1", styles['CoverVersion']))
     elements.append(Spacer(1, 30 * mm))
 
     elements.append(Paragraph("Aggregate FT8/FT4 spots from multiple WSJT-X/JTDX instances", styles['Credits']))
@@ -456,7 +456,7 @@ def build_content():
         ['CFBundleName', 'DXClusterAggregator'],
         ['CFBundleDisplayName', 'DX Cluster Aggregator'],
         ['CFBundleIdentifier', 'com.vu2cpl.dxclusteraggregator'],
-        ['CFBundleVersion', '1.8.0'],
+        ['CFBundleVersion', '1.8.1'],
         ['CFBundleExecutable', 'DXClusterAggregator'],
         ['CFBundlePackageType', 'APPL'],
         ['CFBundleIconFile', 'AppIcon'],
@@ -692,29 +692,28 @@ def build_content():
         "The application automatically detects login and password prompts from the cluster server. "
         "Most DX cluster nodes only require a callsign (no password). The app sends your username "
         "when it detects a login prompt, and your password (if provided) when it detects a password "
-        "prompt. Connection status is shown next to each cluster entry:",
+        "prompt. Connection status is shown next to each cluster entry as a coloured status pill. "
+        "The pill is also a button: clicking it drops the session and redials immediately - useful "
+        "to kick a misbehaving cluster without stopping monitoring. Pill states:",
         styles['Body']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> <b>Connecting...</b> - TCP connection is being established",
+        "<bullet>&bull;</bullet> <b>Green</b> - proven live: the cluster acknowledged the login, or "
+        "spots are arriving (which also covers clusters that need no login). The pill shows the "
+        "session spot count and how long ago the last spot arrived (e.g. \"128 &middot; 9 sec\")",
         styles['BulletItem']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> <b>Connected</b> (yellow dot) - TCP is up and the login has been sent, "
+        "<bullet>&bull;</bullet> <b>Yellow, \"no spots\"</b> - TCP is up and the login has been sent, "
         "but the session is not yet proven: no login acknowledgement and no spots so far. A cluster whose "
         "login processing is down can sit in this state - the watchdog recycles it after 2 minutes",
         styles['BulletItem']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> <b>Live</b> (green dot) - the session is proven working: the cluster "
-        "acknowledged the login, or spots are arriving (which also covers clusters that need no login). "
-        "A second line shows the total spot count and how long ago the last spot arrived",
-        styles['BulletItem']
-    ))
-    elements.append(Paragraph(
-        "<bullet>&bull;</bullet> <b>Reconnect in Ns</b> - the connection dropped (or the watchdog recycled "
-        "a dead session) and a retry is scheduled with increasing backoff. Sessions that go silent for "
-        "15 minutes while Live are also recycled automatically",
+        "<bullet>&bull;</bullet> <b>Orange, \"connecting\" / \"retry Ns\"</b> - down: the connection is "
+        "being established, or it dropped (or the watchdog recycled a dead session) and a retry is "
+        "scheduled with increasing backoff. Sessions that go silent for 15 minutes while live are "
+        "also recycled automatically",
         styles['BulletItem']
     ))
 

@@ -166,6 +166,16 @@ class DXClusterClient: ObservableObject {
         watchdog?.invalidate()
     }
 
+    /// UI action (status pill click): drop this cluster's session and redial
+    /// immediately, bypassing any pending backoff. No-op when monitoring is
+    /// stopped. Main thread only.
+    func recycleNow() {
+        guard shouldReconnect else { return }
+        reconnectAttempt = 0
+        statusText = "Redialing..."
+        connect(address: address, port: port, username: username, password: password)
+    }
+
     /// Mark this session "proven live" — a post-login welcome/ack line, or
     /// any parsed spot (which also covers no-login ports where handleAuth
     /// never runs). Resets the reconnect backoff: only a proven session

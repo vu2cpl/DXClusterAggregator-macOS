@@ -1,40 +1,68 @@
 import SwiftUI
 
-/// Per-cluster status cell. Must be its own view with @ObservedObject —
+/// Per-cluster status pill. Must be its own view with @ObservedObject —
 /// the parent holds clients in a plain @State dictionary, which does NOT
 /// subscribe to each client's @Published properties, so an inline badge
 /// only refreshed when something unrelated redrew the parent.
 ///
-/// Badge semantics (the whole point — TCP alone proves nothing):
+/// Indicator AND button (styled after the shack Vue dashboard's cluster
+/// pills): a tinted capsule whose colour is the state, whose text is the
+/// activity, and whose click drops + redials the session immediately.
+///
+/// Colour semantics (the whole point — TCP alone proves nothing):
 ///   green  = proven live (login acked or spots parsed)
 ///   yellow = TCP connected but nothing proven yet (dead-login trap state)
 ///   orange = down / reconnecting
 private struct ClusterStatusCell: View {
     @ObservedObject var client: DXClusterClient
 
-    var body: some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(client.isAuthenticated ? Color.green :
-                      (client.isConnected ? Color.yellow : Color.orange))
-                .frame(width: 8, height: 8)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(client.statusText)
-                    .font(.caption2)
-                    .lineLimit(1)
-                if let last = client.lastSpotAt {
-                    // `style: .relative` self-updates — no timer needed.
-                    (Text("\(client.spotCount) · ") + Text(last, style: .relative))
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                } else if client.isConnected {
-                    Text("no spots yet")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
+    private var pillColor: Color {
+        client.isAuthenticated ? .green : (client.isConnected ? .yellow : .orange)
+    }
+
+    private var compactCount: String {
+        let n = client.spotCount
+        if n >= 10_000 { return String(format: "%.0fk", Double(n) / 1000) }
+        if n >= 1_000  { return String(format: "%.1fk", Double(n) / 1000) }
+        return "\(n)"
+    }
+
+    /// Compact one-line pill text. "Reconnect in 30s (try 2)" → "retry 30s";
+    /// live sessions show activity (count · age) instead of a state word —
+    /// the colour already says "live".
+    private var pillLabel: Text {
+        if client.isAuthenticated, let last = client.lastSpotAt {
+            // `style: .relative` self-updates — no timer needed.
+            return Text("\(compactCount) · ") + Text(last, style: .relative)
         }
+        if client.isAuthenticated { return Text("live") }
+        if client.isConnected { return Text("no spots") }
+        var s = client.statusText
+        if s.hasPrefix("Reconnect in ") {
+            s = "retry " + s.dropFirst("Reconnect in ".count)
+            if let r = s.range(of: " (try") { s = String(s[..<r.lowerBound]) }
+        }
+        return Text(s.lowercased())
+    }
+
+    var body: some View {
+        Button(action: { client.recycleNow() }) {
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(pillColor)
+                    .frame(width: 7, height: 7)
+                pillLabel
+                    .font(.system(size: 11.5, weight: .semibold, design: .monospaced))
+                    .foregroundColor(pillColor)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(pillColor.opacity(0.13)))
+            .overlay(Capsule().stroke(pillColor.opacity(0.45), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .help("\(client.statusText) · \(client.spotCount) spots this session. Click to drop and redial now.")
     }
 }
 
@@ -157,7 +185,7 @@ struct ContentView: View {
             }
             .help("Collapse the settings panel for more space")
 
-            Text("v1.8.0 (macOS)")
+            Text("v1.8.1 (macOS)")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -469,7 +497,7 @@ struct ContentView: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                        .frame(width: 120, alignment: .leading)
+                        .frame(width: 135, alignment: .leading)
 
                         Spacer()
 
