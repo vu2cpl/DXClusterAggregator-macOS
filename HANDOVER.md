@@ -202,6 +202,14 @@ committed to the repo (see conventions below).
   with Telnet IAC option-negotiation bytes and use hanging (newline-less)
   prompts. `DXClusterClient.stripTelnetIAC` + the hanging-prompt path handle
   this; see comments there before touching auth detection.
+- **`lsof` cannot see the cluster connections.** `NWConnection`
+  (Network.framework) rides Apple's user-space networking stack (Skywalk),
+  not BSD sockets — `lsof -i` on the app's pid shows only the `:7575`
+  listener and its clients, never the outbound telnet sessions, even when
+  they are live and streaming. Debug real flow state with
+  `nettop -x -L 1 -p <pid>` (shows per-flow bytes in/out). Bit us on
+  2026-08-24: an apparently-live badge with "no socket" was misread as a
+  state bug when the tool was simply blind.
 
 ---
 
@@ -210,8 +218,12 @@ committed to the repo (see conventions below).
 - **v1.8.0** — Honest cluster status + self-healing sessions. Motivated by the
   2026-08-24 VE7CC outage (its login layer went silently dead: TCP + banner
   fine, every callsign ignored) — the app showed "Connected" for a session
-  receiving nothing, and worse, the badge could survive the socket itself
-  dying. Four changes: **(1)** three-state badge — green only when *proven
+  receiving nothing. (Diagnostic footnote: `lsof` shows NO sockets for the
+  cluster connections — `NWConnection` uses user-space networking (Skywalk),
+  invisible to fd-based tools; only the BSD-bound `:7575` listener appears.
+  Use `nettop -x -L 1 -p <pid>` to see the real flows. An earlier "badge
+  survives with no socket" observation was this blindness, not an app bug.)
+  Four changes: **(1)** three-state badge — green only when *proven
   live* (login welcome ack **or** first parsed spot, which also covers
   no-login ports like VU2OY/skimmer feeds), yellow = TCP up but unproven (the
   dead-login trap state), orange = down/reconnecting; **(2)** per-source
