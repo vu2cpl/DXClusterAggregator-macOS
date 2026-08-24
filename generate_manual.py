@@ -231,7 +231,7 @@ def build_cover():
     elements.append(Spacer(1, 8 * mm))
     elements.append(Paragraph("User Manual", styles['CoverSubtitle']))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(Paragraph("Version 1.7.6", styles['CoverVersion']))
+    elements.append(Paragraph("Version 1.8.0", styles['CoverVersion']))
     elements.append(Spacer(1, 30 * mm))
 
     elements.append(Paragraph("Aggregate FT8/FT4 spots from multiple WSJT-X/JTDX instances", styles['Credits']))
@@ -456,7 +456,7 @@ def build_content():
         ['CFBundleName', 'DXClusterAggregator'],
         ['CFBundleDisplayName', 'DX Cluster Aggregator'],
         ['CFBundleIdentifier', 'com.vu2cpl.dxclusteraggregator'],
-        ['CFBundleVersion', '1.7.6'],
+        ['CFBundleVersion', '1.8.0'],
         ['CFBundleExecutable', 'DXClusterAggregator'],
         ['CFBundlePackageType', 'APPL'],
         ['CFBundleIconFile', 'AppIcon'],
@@ -700,11 +700,21 @@ def build_content():
         styles['BulletItem']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> <b>Connected</b> - TCP connection established, waiting for login",
+        "<bullet>&bull;</bullet> <b>Connected</b> (yellow dot) - TCP is up and the login has been sent, "
+        "but the session is not yet proven: no login acknowledgement and no spots so far. A cluster whose "
+        "login processing is down can sit in this state - the watchdog recycles it after 2 minutes",
         styles['BulletItem']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> <b>Authenticated</b> - Successfully logged in and receiving spots",
+        "<bullet>&bull;</bullet> <b>Live</b> (green dot) - the session is proven working: the cluster "
+        "acknowledged the login, or spots are arriving (which also covers clusters that need no login). "
+        "A second line shows the total spot count and how long ago the last spot arrived",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> <b>Reconnect in Ns</b> - the connection dropped (or the watchdog recycled "
+        "a dead session) and a retry is scheduled with increasing backoff. Sessions that go silent for "
+        "15 minutes while Live are also recycled automatically",
         styles['BulletItem']
     ))
 

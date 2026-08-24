@@ -13,6 +13,15 @@ class DXClusterClient: ObservableObject {
     @Published var isConnected = false
     @Published var statusText = "Disconnected"
 
+    // "Proven live": a welcome/ack line after login, or any parsed spot —
+    // the spot is the ground truth and also covers no-login ports (VU2OY,
+    // skimmer feeds) where no auth exchange ever happens. `isConnected`
+    // alone only means TCP came up; a cluster whose login layer is dead
+    // (seen with VE7CC 2026-08-24) sits "connected" forever with zero spots.
+    @Published var isAuthenticated = false
+    @Published var spotCount = 0
+    @Published var lastSpotAt: Date? = nil
+
     var onSpot: ((ClusterSpot) -> Void)?
 
     private var address: String = ""
@@ -31,6 +40,19 @@ class DXClusterClient: ObservableObject {
     private var reconnectAttempt = 0
     private let reconnectSchedule: [TimeInterval] = [10, 30, 60, 120, 300]  // seconds; last value repeats
     private var reconnectWorkItem: DispatchWorkItem?
+
+    // Session-health watchdog (all state main-thread only). Recycles the
+    // connection when it is "connected" but demonstrably not working:
+    //   • TCP up but never proven live within `authTimeout` — the cluster is
+    //     ignoring our login (or never sent a prompt we recognize). Backoff
+    //     escalates because reconnectAttempt only resets on proven-live.
+    //   • Proven live but nothing received for `silenceTimeout` — dead or
+    //     half-open session that TCP will never flag on its own.
+    private var watchdog: Timer?
+    private var readySince: Date?
+    private var lastRxAt = Date()
+    private let authTimeout: TimeInterval = 120
+    private let silenceTimeout: TimeInterval = 15 * 60
 
     struct ClusterSpot {
         let spotter: String
@@ -65,6 +87,14 @@ class DXClusterClient: ObservableObject {
         self.buffer = ""
         self.shouldReconnect = true
 
+        DispatchQueue.main.async {
+            self.isConnected = false
+            self.isAuthenticated = false
+            self.readySince = nil
+            self.lastRxAt = Date()
+            self.startWatchdogIfNeeded()
+        }
+
         let host = NWEndpoint.Host(address)
         let nwPort = NWEndpoint.Port(rawValue: port)!
 
@@ -77,18 +107,25 @@ class DXClusterClient: ObservableObject {
                 case .ready:
                     self.isConnected = true
                     self.statusText = "Connected"
-                    // Successful connection: reset backoff so future drops
-                    // retry quickly before escalating.
-                    self.reconnectAttempt = 0
+                    self.readySince = Date()
+                    self.lastRxAt = Date()
+                    // NOTE: backoff (reconnectAttempt) now resets in
+                    // markAuthenticated(), not here — a cluster that accepts
+                    // TCP but ignores logins would otherwise defeat the
+                    // escalation and be hammered every 10s forever.
                     print("DX Cluster connected to \(address):\(port)")
                     self.startReceiving()
                 case .failed(let error):
                     self.isConnected = false
+                    self.isAuthenticated = false
+                    self.readySince = nil
                     self.statusText = "Failed"
                     print("DX Cluster connection failed: \(error)")
                     self.scheduleReconnectIfNeeded()
                 case .cancelled:
                     self.isConnected = false
+                    self.isAuthenticated = false
+                    self.readySince = nil
                     self.statusText = "Disconnected"
                     self.scheduleReconnectIfNeeded()
                 case .waiting(let error):
@@ -117,7 +154,53 @@ class DXClusterClient: ObservableObject {
         connection = nil
         DispatchQueue.main.async {
             self.isConnected = false
+            self.isAuthenticated = false
+            self.readySince = nil
             self.statusText = "Disconnected"
+            self.watchdog?.invalidate()
+            self.watchdog = nil
+        }
+    }
+
+    deinit {
+        watchdog?.invalidate()
+    }
+
+    /// Mark this session "proven live" — a post-login welcome/ack line, or
+    /// any parsed spot (which also covers no-login ports where handleAuth
+    /// never runs). Resets the reconnect backoff: only a proven session
+    /// earns the fast 10s retry on its next drop.
+    private func markAuthenticated() {
+        guard !authenticated else { return }
+        authenticated = true
+        DispatchQueue.main.async {
+            self.isAuthenticated = true
+            self.reconnectAttempt = 0
+            self.statusText = "Live"
+        }
+    }
+
+    // MARK: - Session-health watchdog (main thread)
+
+    private func startWatchdogIfNeeded() {
+        guard watchdog == nil else { return }
+        watchdog = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.watchdogTick()
+        }
+    }
+
+    private func watchdogTick() {
+        guard isConnected else { return }
+        if !isAuthenticated, let since = readySince,
+           Date().timeIntervalSince(since) > authTimeout {
+            print("DX Cluster [\(name)] watchdog: connected \(Int(authTimeout))s without login ack or spots — recycling")
+            statusText = "No login ack"
+            connection?.cancel()   // → .cancelled → reconnect with backoff
+        } else if isAuthenticated,
+                  Date().timeIntervalSince(lastRxAt) > silenceTimeout {
+            print("DX Cluster [\(name)] watchdog: silent \(Int(silenceTimeout / 60))m — recycling")
+            statusText = "Silent too long"
+            connection?.cancel()
         }
     }
 
@@ -169,10 +252,20 @@ class DXClusterClient: ObservableObject {
             }
 
             if isComplete || error != nil {
+                // Server-initiated close (FIN) or receive error. This path
+                // previously just flipped the flags and returned — no
+                // reconnect was ever scheduled, stranding the client until
+                // the user restarted monitoring. Tear the connection down so
+                // the .cancelled state handler runs the normal backoff path.
                 DispatchQueue.main.async {
-                    self?.isConnected = false
-                    self?.statusText = error != nil ? "Error" : "Disconnected"
+                    guard let self else { return }
+                    self.isConnected = false
+                    self.isAuthenticated = false
+                    self.readySince = nil
+                    self.statusText = error != nil ? "Error" : "Closed by server"
+                    self.scheduleReconnectIfNeeded()
                 }
+                self?.connection?.cancel()
                 return
             }
 
@@ -244,6 +337,7 @@ class DXClusterClient: ObservableObject {
 
     private func processIncoming(_ text: String) {
         buffer += text
+        DispatchQueue.main.async { self.lastRxAt = Date() }
 
         // Safety cap: the line loop below only drains on a newline, and the
         // hanging-prompt cleanup at the end is gated behind !authenticated. A
@@ -273,6 +367,11 @@ class DXClusterClient: ObservableObject {
 
             // Parse spot lines regardless of auth state (some clusters send spots immediately)
             if let spot = parseSpotLine(trimmed) {
+                markAuthenticated()   // a real spot is proof the session works
+                DispatchQueue.main.async {
+                    self.spotCount += 1
+                    self.lastSpotAt = Date()
+                }
                 onSpot?(spot)
             }
         }
@@ -329,10 +428,7 @@ class DXClusterClient: ObservableObject {
         // Detect successful login
         if sentUsername && (lower.contains("hello") || lower.contains("welcome") ||
             lower.contains("connected") || lower.contains("cluster")) {
-            authenticated = true
-            DispatchQueue.main.async {
-                self.statusText = "Authenticated"
-            }
+            markAuthenticated()
         }
     }
 

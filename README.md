@@ -6,6 +6,7 @@ A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JT
 
 - **Multiple UDP Sources** — Connect to several WSJT-X/JTDX instances simultaneously
 - **DX Cluster Nodes** — Telnet DX cluster servers with auto-authentication and **auto-reconnect** (10s → 30s → 60s → 120s → 5 min backoff)
+- **Honest connection status** — per-node badge turns green only when the session is *proven live* (login acknowledged or spots actually arriving), yellow while TCP is up but unproven, with a live **spot count + "last spot" age**; a watchdog recycles sessions that connect but never log in, or go silent for 15 min
 - **ClubLog Integration** — Download your log and highlight spots for **New DXCC / New Slot / New Band / New Mode** (configurable)
 - **LoTW User Marker** — Green dot after callsigns of known LoTW uploaders (downloaded from ARRL directly)
 - **Beacon Detection** — NCDXF/IBP + national beacon database; `/B` `/BCN` suffix handling; no false alerts
@@ -139,9 +140,9 @@ cat > DXClusterAggregator.app/Contents/Info.plist << 'EOF'
     <key>CFBundleIdentifier</key>
     <string>com.vu2cpl.dxclusteraggregator</string>
     <key>CFBundleVersion</key>
-    <string>1.7.6</string>
+    <string>1.8.0</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.7.6</string>
+    <string>1.8.0</string>
     <key>CFBundleExecutable</key>
     <string>DXClusterAggregator</string>
     <key>CFBundlePackageType</key>

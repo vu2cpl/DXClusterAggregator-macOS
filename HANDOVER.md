@@ -4,8 +4,8 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.7.6
-**Last updated:** 2026-06-28
+**Current version:** v1.8.0
+**Last updated:** 2026-08-24
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -207,6 +207,27 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
+- **v1.8.0** — Honest cluster status + self-healing sessions. Motivated by the
+  2026-08-24 VE7CC outage (its login layer went silently dead: TCP + banner
+  fine, every callsign ignored) — the app showed "Connected" for a session
+  receiving nothing, and worse, the badge could survive the socket itself
+  dying. Four changes: **(1)** three-state badge — green only when *proven
+  live* (login welcome ack **or** first parsed spot, which also covers
+  no-login ports like VU2OY/skimmer feeds), yellow = TCP up but unproven (the
+  dead-login trap state), orange = down/reconnecting; **(2)** per-source
+  **spot count + self-updating "last spot" age** in the status cell (SwiftUI
+  `Text(_, style: .relative)`); **(3)** two bug fixes — server-initiated
+  close (`isComplete` in `receiveData`) never scheduled a reconnect,
+  stranding the client until monitoring restart, and the status row read
+  client state through a plain `@State` dictionary without observing it, so
+  badges only refreshed when something unrelated redrew (fixed with an
+  `@ObservedObject` `ClusterStatusCell` subview); **(4)** a 30s session-health
+  watchdog — connected-but-unproven for 120s → recycle (backoff escalates
+  because `reconnectAttempt` now resets on *proven-live*, not on TCP `.ready`,
+  so a dead-login cluster settles at a 5-min retry instead of parking forever
+  or hammering), and proven-live-but-silent for 15 min → recycle (catches
+  half-open sockets TCP never flags). Status-bar `DX: n/m` green count now
+  counts proven-live sources.
 - **v1.7.6** — Fix minimised-window restore: both `WindowManager.showMainWindow`
   and `applicationShouldHandleReopen` now call `deminiaturize(nil)` when the
   window is sitting in the Dock as a thumbnail. Previously `makeKeyAndOrderFront`

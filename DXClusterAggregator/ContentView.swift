@@ -1,5 +1,43 @@
 import SwiftUI
 
+/// Per-cluster status cell. Must be its own view with @ObservedObject —
+/// the parent holds clients in a plain @State dictionary, which does NOT
+/// subscribe to each client's @Published properties, so an inline badge
+/// only refreshed when something unrelated redrew the parent.
+///
+/// Badge semantics (the whole point — TCP alone proves nothing):
+///   green  = proven live (login acked or spots parsed)
+///   yellow = TCP connected but nothing proven yet (dead-login trap state)
+///   orange = down / reconnecting
+private struct ClusterStatusCell: View {
+    @ObservedObject var client: DXClusterClient
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(client.isAuthenticated ? Color.green :
+                      (client.isConnected ? Color.yellow : Color.orange))
+                .frame(width: 8, height: 8)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(client.statusText)
+                    .font(.caption2)
+                    .lineLimit(1)
+                if let last = client.lastSpotAt {
+                    // `style: .relative` self-updates — no timer needed.
+                    (Text("\(client.spotCount) · ") + Text(last, style: .relative))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                } else if client.isConnected {
+                    Text("no spots yet")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject var settings: AppSettings
     @StateObject private var tcpServer = ClusterTCPServer()
@@ -119,7 +157,7 @@ struct ContentView: View {
             }
             .help("Collapse the settings panel for more space")
 
-            Text("v1.7.6 (macOS)")
+            Text("v1.8.0 (macOS)")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -420,12 +458,7 @@ struct ContentView: View {
 
                         HStack(spacing: 4) {
                             if isMonitoring, let client = dxClusterClients[source.id] {
-                                Circle()
-                                    .fill(client.isConnected ? .green : .orange)
-                                    .frame(width: 8, height: 8)
-                                Text(client.statusText)
-                                    .font(.caption2)
-                                    .lineLimit(1)
+                                ClusterStatusCell(client: client)
                             } else if !source.enabled {
                                 Text("Off")
                                     .font(.caption2)
@@ -436,7 +469,7 @@ struct ContentView: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                        .frame(width: 80, alignment: .leading)
+                        .frame(width: 120, alignment: .leading)
 
                         Spacer()
 
@@ -928,7 +961,7 @@ struct ContentView: View {
             if isMonitoring {
                 let activeUDP = udpListeners.values.filter { $0.isListening }.count
                 let totalUDP = udpListeners.count
-                let activeDX = dxClusterClients.values.filter { $0.isConnected }.count
+                let activeDX = dxClusterClients.values.filter { $0.isAuthenticated }.count
                 let totalDX = dxClusterClients.count
 
                 if totalUDP > 0 {
