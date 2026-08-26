@@ -1,6 +1,9 @@
 # DXCA 2.0 — Rust + web GUI port plan
 
-**Status:** design only — nothing implemented yet. Drafted 2026-08-26.
+**Status:** original draft, 2026-08-26. M0 was executed the same day — the
+**canonical, living copy of this plan is now `docs/PLAN.md` in the
+[vu2cpl/dxca](https://github.com/vu2cpl/dxca) repo** (local
+`~/projects/dxca`); this file stays as the design-time record.
 **Target:** a standalone repo (working name **`dxca`**, private per the
 GitHub-repos rule) containing a headless Rust server with a Svelte web GUI,
 running 24/7 on a Raspberry Pi (and equally on macOS/Windows/Linux),

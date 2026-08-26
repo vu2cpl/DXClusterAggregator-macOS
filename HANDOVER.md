@@ -346,11 +346,15 @@ committed to the repo (see conventions below).
 
 ## Open items
 
-- **DXCA 2.0 (Rust/Pi port) — plan drafted, awaiting go-ahead.** See
-  [`docs/DXCA2-RUST-PLAN.md`](docs/DXCA2-RUST-PLAN.md). Next concrete step is
-  M0: create the private `dxca` repo and scaffold the workspace. Until 2.0
-  ships, this repo remains the production DXCA and normal fixes continue to
-  land here (and inform the 2.0 parity spec).
+- **DXCA 2.0 (Rust/Pi port) — M0 scaffolded 2026-08-26.** The private repo
+  exists: https://github.com/vu2cpl/dxca (local `~/projects/dxca`), with the
+  workspace, embedded-web-UI server stub, green local gate, and a proven
+  aarch64 cross-compile. The plan's canonical copy moved there
+  (`docs/PLAN.md`); this repo's [`docs/DXCA2-RUST-PLAN.md`](docs/DXCA2-RUST-PLAN.md)
+  is the original draft. Next: run the binary on a real Pi once, then M1
+  (WSJT-X codec port with captured test vectors). Until 2.0 ships, this repo
+  remains the production DXCA and normal fixes continue to land here (and
+  inform the 2.0 parity spec).
 - **Window restore after display-topology change.** `WindowManager` currently
   deminiaturizes an existing window (v1.7.6 fix), but doesn't handle the case
   where the SwiftUI-managed window has been dropped entirely — e.g. after an
