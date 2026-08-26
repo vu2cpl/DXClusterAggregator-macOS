@@ -346,16 +346,20 @@ committed to the repo (see conventions below).
 
 ## Open items
 
-- **DXCA 2.0 (Rust/Pi port) — M0 scaffolded 2026-08-26.** The private repo
-  exists: https://github.com/vu2cpl/dxca (local `~/projects/dxca`), with the
-  workspace, embedded-web-UI server stub, green local gate, and a proven
-  aarch64 cross-compile. The plan's canonical copy moved there
-  (`docs/PLAN.md`); this repo's [`docs/DXCA2-RUST-PLAN.md`](docs/DXCA2-RUST-PLAN.md)
-  is the original draft. M0 closed same day — the cross-compiled binary ran
-  on noderedpi4 (status API + embedded UI verified). Next: M1 (WSJT-X codec
-  port with captured test vectors). Until 2.0 ships, this repo
-  remains the production DXCA and normal fixes continue to land here (and
-  inform the 2.0 parity spec).
+- **DXCA 2.0 (Rust port) — M2 complete; ⚠️ dxca is running the shack in
+  burn-in since 2026-08-27.** The successor repo:
+  https://github.com/vu2cpl/dxca (local `~/projects/dxca`; the plan's
+  canonical copy is `docs/PLAN.md` there, this repo's
+  [`docs/DXCA2-RUST-PLAN.md`](docs/DXCA2-RUST-PLAN.md) is the original
+  draft). Milestones so far: M0 scaffold + Pi binary verified on
+  noderedpi4; M1 core-logic ports with exact parity against this app's
+  own matrix.json; M2 spot path validated live — dxca took over ports
+  2333/2334/2335 + 7575 on the Mac, RUMlog populated and click-to-fill
+  worked. **While the burn-in runs, this 1.x app must stay closed** (port
+  clash) — it is the standing fallback (`pkill -f target/release/dxca`,
+  relaunch the app). 1.x fixes still land here and inform the 2.0 parity
+  spec. Next: M3 (cluster-node ingest — until then dxca has no DX-cluster
+  nodes, so cluster-spot features are 1.x-only).
 - **Window restore after display-topology change.** `WindowManager` currently
   deminiaturizes an existing window (v1.7.6 fix), but doesn't handle the case
   where the SwiftUI-managed window has been dropped entirely — e.g. after an
