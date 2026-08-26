@@ -374,13 +374,14 @@ committed to the repo (see conventions below).
   proven Live immediately, VE7CC honest-yellow). **While the burn-in runs,
   this 1.x app must stay closed** (port clash) — it is the standing
   fallback (`pkill -f target/release/dxca`, relaunch the app). 1.x fixes
-  still land here and inform the 2.0 parity spec. M4 and M5-core same
-  day: SQLite users + per-user ClubLog matrices + Telegram fan-out, then
-  the live WebSocket dashboard (spots table, filters, status pills, LoTW
-  markers) — the browser now covers the daily-driver workflow. Manoj's
-  account setup on the burn-in pending (http://localhost:7580). Next:
-  M5 remainder (web config editing), then M6 (Pi cutover + v2.0.0 —
-  the milestone that formally retires this app to fallback duty).
+  still land here and inform the 2.0 parity spec. M4 and all of M5 same
+  day: SQLite users + per-user ClubLog matrices + Telegram fan-out, the
+  live WebSocket dashboard (spots table, filters, status pills, LoTW
+  markers), and web config editing with hot-apply — the browser now
+  covers the daily-driver workflow including sources/nodes/destinations
+  management. Manoj's admin account exists on the burn-in. Next: M6 (Pi
+  cutover + v2.0.0 — the milestone that formally retires this app to
+  fallback duty).
 - **Window restore after display-topology change.** `WindowManager` currently
   deminiaturizes an existing window (v1.7.6 fix), but doesn't handle the case
   where the SwiftUI-managed window has been dropped entirely — e.g. after an
