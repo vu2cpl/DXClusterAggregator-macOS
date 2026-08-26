@@ -351,8 +351,9 @@ committed to the repo (see conventions below).
   workspace, embedded-web-UI server stub, green local gate, and a proven
   aarch64 cross-compile. The plan's canonical copy moved there
   (`docs/PLAN.md`); this repo's [`docs/DXCA2-RUST-PLAN.md`](docs/DXCA2-RUST-PLAN.md)
-  is the original draft. Next: run the binary on a real Pi once, then M1
-  (WSJT-X codec port with captured test vectors). Until 2.0 ships, this repo
+  is the original draft. M0 closed same day — the cross-compiled binary ran
+  on noderedpi4 (status API + embedded UI verified). Next: M1 (WSJT-X codec
+  port with captured test vectors). Until 2.0 ships, this repo
   remains the production DXCA and normal fixes continue to land here (and
   inform the 2.0 parity spec).
 - **Window restore after display-topology change.** `WindowManager` currently
