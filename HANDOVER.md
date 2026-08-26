@@ -379,9 +379,13 @@ committed to the repo (see conventions below).
   live WebSocket dashboard (spots table, filters, status pills, LoTW
   markers), and web config editing with hot-apply — the browser now
   covers the daily-driver workflow including sources/nodes/destinations
-  management. Manoj's admin account exists on the burn-in. Next: M6 (Pi
-  cutover + v2.0.0 — the milestone that formally retires this app to
-  fallback duty).
+  management. Manoj's admin account exists on the burn-in. **M6 done same day:
+  v2.0.0 tagged + released** (binaries attached), the Mac runs it as a
+  launchd agent, and noderedpi4 (192.168.1.169) has it installed as a
+  systemd service, standing by. One box left: the decoder cutover —
+  checklist in the dxca HANDOVER. After cutover this repo flips to
+  maintenance mode and docs/UDP-PIPELINE.md gets the Pi-centred
+  rewrite.
 - **Window restore after display-topology change.** `WindowManager` currently
   deminiaturizes an existing window (v1.7.6 fix), but doesn't handle the case
   where the SwiftUI-managed window has been dropped entirely — e.g. after an
