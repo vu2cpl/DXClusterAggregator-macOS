@@ -103,6 +103,11 @@ final class UDPBroadcaster: ObservableObject {
         var resultIds: [UUID: Bool] = [:]
 
         for dest in destinations {
+            // Passthrough destinations are fed by `sendRaw` on every inbound
+            // datagram, not by the per-spot aggregation path. Skip before any
+            // bookkeeping — counting them as attempted here books a phantom
+            // failure per spot (their result never lands in resultIds).
+            if dest.format == .passthrough { continue }
             let allowed = dest.allowedSources.isEmpty
                 || dest.allowedSources.contains(sourceName)
             guard allowed else { continue }
@@ -132,10 +137,8 @@ final class UDPBroadcaster: ObservableObject {
                     ok = false
                 }
             case .passthrough:
-                // Passthrough destinations are fed by `sendRaw` on every
-                // inbound datagram, not by the per-spot aggregation path.
-                // Skip here so the spot doesn't get double-emitted (once
-                // as raw upstream datagram, again as a synthesised pair).
+                // Unreachable — passthrough destinations are skipped at the
+                // top of the loop (they're fed by `sendRaw`, not per-spot).
                 continue
             }
             resultIds[dest.id] = ok

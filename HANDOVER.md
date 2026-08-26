@@ -4,7 +4,7 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.2
+**Current version:** v1.8.3
 **Last updated:** 2026-08-26
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
@@ -232,6 +232,15 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
+- **v1.8.3** — Fix phantom fail counter for passthrough destinations.
+  v1.8.2's per-spot `broadcast()` appended the destination to `attemptedIds`
+  *before* the format switch, and the `.passthrough` case `continue`d without
+  writing a result — so every aggregated spot booked a failure against the
+  passthrough destination (`UDP→: n (fails m)` climbing forever, live send
+  path unaffected). The passthrough skip now happens at the top of the loop,
+  before any bookkeeping. Spotted live within minutes of deploying v1.8.2:
+  status bar read `UDP→: 144 (fails 74)` while RUMlog was receiving
+  everything (click-to-fill verified working from all three decoders).
 - **v1.8.2** — UDP passthrough. Adds a third broadcast destination format
   (alongside `cluster` and `wsjtx`): **Passthrough** forwards every raw
   incoming UDP datagram from allowed sources verbatim to the destination,
