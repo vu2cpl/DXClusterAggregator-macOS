@@ -12,7 +12,7 @@ A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JT
 - **Beacon Detection** — NCDXF/IBP + national beacon database; `/B` `/BCN` suffix handling; no false alerts
 - **Digital modes grouped as DATA** — FT8/FT4/RTTY/JT65/PSK/MSK144 etc. share one DXCC slot, matching award rules
 - **Built-in Telnet Cluster Server** — Feed aggregated spots to Logger32, N1MM+, Log4OM, DXKeeper, etc.
-- **Dual UDP Broadcast** — Forward spots to two UDP destinations
+- **UDP Broadcast destinations** — forward aggregated spots to one or more UDP destinations in either DX-cluster text or WSJT-X binary format; or use the **Passthrough** format to relay every raw incoming decoder datagram verbatim, keeping downstream loggers' click-to-fill callsign lookup (e.g. RUMlog) working when decoders are pointed at DXCA instead of the logger directly
 - **Telegram + macOS Notifications** — Per-callsign cooldown, selectable alert levels
 - **Sortable / resizable spots table** — click any column to sort, drag between headers to resize
 - **Live filters** — Sources dropdown, Bands dropdown, New Only, Hide Duplicates (60s window)
@@ -140,9 +140,9 @@ cat > DXClusterAggregator.app/Contents/Info.plist << 'EOF'
     <key>CFBundleIdentifier</key>
     <string>com.vu2cpl.dxclusteraggregator</string>
     <key>CFBundleVersion</key>
-    <string>1.8.1</string>
+    <string>1.8.2</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.8.1</string>
+    <string>1.8.2</string>
     <key>CFBundleExecutable</key>
     <string>DXClusterAggregator</string>
     <key>CFBundlePackageType</key>

@@ -13,6 +13,13 @@ class WSJTXUDPListener: ObservableObject {
 
     var onDecode: ((WSJTXDecode, UUID) -> Void)?
     var onStatus: ((WSJTXStatus) -> Void)?
+    /// Fires once per received datagram, before parsing, so the caller can
+    /// forward the raw bytes unmodified to a passthrough destination. Wired
+    /// by the orchestrator to `UDPBroadcaster.sendRaw` — this is what lets
+    /// downstream loggers see the decoder's original Status stream
+    /// (including user-selection updates) instead of only DXCA's aggregated
+    /// per-spot re-emit.
+    var onRawDatagram: ((Data, UUID) -> Void)?
 
     init(name: String = "WSJT-X", sourceId: UUID = UUID()) {
         self.name = name
@@ -73,8 +80,9 @@ class WSJTXUDPListener: ObservableObject {
 
     private func receiveMessage(on connection: NWConnection) {
         connection.receiveMessage { [weak self] data, _, _, error in
-            if let data = data, !data.isEmpty {
-                self?.processMessage(data)
+            if let self, let data = data, !data.isEmpty {
+                self.onRawDatagram?(data, self.sourceId)
+                self.processMessage(data)
             }
             if error == nil {
                 self?.receiveMessage(on: connection)

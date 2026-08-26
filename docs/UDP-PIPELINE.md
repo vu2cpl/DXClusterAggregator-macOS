@@ -9,12 +9,23 @@ to bind port 2237 at login, one wins, everyone else silently fails, and it
 looks like "the aggregator is hung". This doc is the canonical wiring — follow
 it and the whole graph starts up in any order without clashes.
 
+> **v1.8.2 update:** the RUMlog broadcast destination is now **Passthrough**
+> instead of *WSJT-X UDP*. Passthrough forwards every incoming decoder
+> datagram to RUMlog verbatim, which preserves the WSJT-X Status stream —
+> including the click-to-fill Status updates that fire when the operator
+> selects a callsign in a decoder's list. The old *WSJT-X UDP* format
+> synthesised one Status+Decode pair per aggregated spot and stripped
+> everything else, which silently broke RUMlog's callsign auto-fill / QRZ
+> lookup for anyone routing decoders through DXCA. If you're on v1.8.1 or
+> earlier, change the format to Passthrough after upgrading.
+
 ## The rule that makes this work
 
 **DXClusterAggregator (DXCA) is the sole listener on every WSJT-X port.**
-Every decoder targets a distinct DXCA input port. DXCA then re-emits every
-spot in WSJT-X wire format to a *separate* port that RUMlog listens on. No two
-processes ever try to bind the same port.
+Every decoder targets a distinct DXCA input port. DXCA then forwards each
+datagram verbatim (Passthrough) to the port RUMlog listens on. No two
+processes ever try to bind the same port, and every WSJT-X message type
+(Status, Decode, Heartbeat, Clear, QSO Logged, …) reaches RUMlog intact.
 
 ## Topology
 
@@ -46,7 +57,10 @@ regardless of which decoder logged it).
                                        │     Logger32, N1MM+, Log4OM, MiniM4 Pro, …
    DXCA aggregates all decoders ───────┤
                                        │
-                                       └─►  UDP :2237 (WSJT-X wire format)
+                                       └─►  UDP :2237  (Passthrough — raw
+                                             WSJT-X datagrams forwarded from
+                                             all sources verbatim, keeps
+                                             click-to-fill working)
                                              RUMlogNG "Data Port" (WSJT-X section)
 ```
 
@@ -57,7 +71,7 @@ regardless of which decoder logged it).
 | 2333  | UDP → 127.0.0.1         | MSHV (decodes)           | DXCA "MSHV" source     | WSJT-X binary        |
 | 2334  | UDP → 127.0.0.1         | JTDX (decodes)           | DXCA "JTDX" source     | WSJT-X binary        |
 | 2335  | UDP → 127.0.0.1         | WSJT-X (decodes)         | DXCA "WSJTX" source    | WSJT-X binary        |
-| 2237  | UDP → 127.0.0.1         | DXCA rebroadcast         | RUMlogNG WSJT-X input  | WSJT-X binary        |
+| 2237  | UDP → 127.0.0.1         | DXCA passthrough         | RUMlogNG WSJT-X input  | WSJT-X binary (raw)  |
 | 2233  | UDP → 127.0.0.1         | MSHV, JTDX, WSJT-X (QSO logs) | RUMlogNG Flex/ADIF | Raw ADIF text        |
 | 7575  | TCP LISTEN              | DXCA                     | Any DX cluster client  | Cluster telnet lines |
 
@@ -74,6 +88,10 @@ Open **Show Settings** on the main window.
 
 ![DXCA settings — UDP sources and broadcast destination](images/udp-pipeline/02-dxca-settings.png)
 
+> Screenshot pre-dates v1.8.2 and shows Destination 1's Format as *WSJT-X U…* —
+> on v1.8.2 or later, change it to **Passthrough** for the reason explained
+> in the callout at the top of this doc.
+
 - **TCP Cluster Port:** `7575` (do not use 7550 — SkimSrv defaults to it).
 - **UDP Sources (WSJT-X / JTDX)** — three rows, `127.0.0.1` on all:
   - `MSHV 2333` — port `2333`
@@ -81,11 +99,20 @@ Open **Show Settings** on the main window.
   - `WSJTX 2335` — port `2335`
   All three Enabled. Status should read **Active** once services are up.
 - **Broadcast Destinations** — one row:
-  - Name `Destination 1`, IP `127.0.0.1`, Port `2237`, Format **WSJT-X**,
-    Sources **All**, **Unf ✓**, **On ✓**.
+  - Name `Destination 1`, IP `127.0.0.1`, Port `2237`, Format
+    **Passthrough**, Sources **All**, **On ✓**. *(The Unf flag doesn't
+    apply to Passthrough — it forwards every raw datagram regardless.)*
 
-That single broadcast destination re-emits every spot DXCA sees (from any
-source) as a Status + Decode pair on 127.0.0.1:2237.
+That destination forwards every incoming datagram from every enabled UDP
+source verbatim to 127.0.0.1:2237. RUMlog receives the decoders' native
+WSJT-X Status/Decode/... stream unchanged, so the click-to-fill callsign
+lookup works exactly as if the decoder were pointed at RUMlog directly.
+
+> If you also want an aggregated / deduplicated spot stream to a *separate*
+> tool (e.g. an RBN uploader), add a second broadcast destination on a
+> different port using the **WSJT-X UDP** format — the two paths coexist
+> because Passthrough entries skip the per-spot synthesis path (see the
+> `continue` in `UDPBroadcaster.broadcast`) and vice-versa.
 
 ![DXCA main window — live monitoring](images/udp-pipeline/01-dxca-main.png)
 
@@ -292,18 +319,31 @@ logged-QSO ADIF only.
 ### "Both cluster spots and WSJT-X spots appear in RUMlog's DX Spots and I see duplicates"
 
 Expected: RUMlog receives the same spot twice, once via its cluster tab
-(from DXCA's TCP :7575) and once via the WSJT-X UDP path (DXCA's rebroadcast
+(from DXCA's TCP :7575) and once via the WSJT-X UDP path (DXCA's Passthrough
 on :2237). If duplication is annoying, disable **Populate dx-spot table**
 under WSJT-X in RUMlog to let the cluster path be the sole feed, or leave
 WSJT-X on and disconnect RUMlog's DX Cluster tab from DXCA. Either is fine;
 pick one and stick to it.
 
+### "Clicking a callsign in WSJT-X/JTDX/MSHV doesn't auto-fill RUMlog's callsign field any more"
+
+You're on DXCA v1.8.1 or earlier — the broadcast destination format is
+*WSJT-X UDP*, which synthesises Status+Decode pairs per spot and drops
+the original Status stream (including the click-to-fill updates). Upgrade
+to v1.8.2 and change the destination Format to **Passthrough**.
+
 ## Version notes
 
+- **DXCA v1.8.2** added the **Passthrough** broadcast format. Before v1.8.2
+  the only WSJT-X-format option was the aggregated per-spot synthesis path,
+  which stripped user-selection Status updates and broke RUMlog's
+  click-to-fill callsign lookup. If you're on v1.8.1 or earlier and using
+  the "decoders → DXCA → RUMlog" topology, upgrade and change your RUMlog
+  broadcast destination's Format to **Passthrough**.
+- DXCA v1.8.1 made the source status a clickable pill.
 - DXCA v1.8.0 introduced honest cluster-status reporting (three-state badge,
   proven-live counters in the status bar), which is what lets you tell at a
   glance whether the UDP path is actually delivering.
-- DXCA v1.8.1 made the source status a clickable pill.
 - The v1.7.5 launch migration bumped any stored TCP cluster port from
   `7550 → 7575` (Skimmer clash). Existing installs from before v1.7.5 pick
   up 7575 automatically on first launch.

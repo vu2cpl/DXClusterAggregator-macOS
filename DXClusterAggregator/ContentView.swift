@@ -185,7 +185,7 @@ struct ContentView: View {
             }
             .help("Collapse the settings panel for more space")
 
-            Text("v1.8.1 (macOS)")
+            Text("v1.8.2 (macOS)")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -282,9 +282,11 @@ struct ContentView: View {
             )) {
                 Text("DX Cluster").tag("cluster")
                 Text("WSJT-X UDP").tag("wsjtx")
+                Text("Passthrough").tag("passthrough")
             }
             .labelsHidden()
             .frame(width: 110)
+            .help("DX Cluster: text spot line per accepted spot. WSJT-X UDP: synthesised Status+Decode pair per spot. Passthrough: forwards every raw incoming UDP datagram from the allowed sources verbatim — needed for downstream loggers that rely on the decoder's own Status stream (e.g. RUMlog's click-to-fill callsign lookup).")
 
             broadcastSourceMenuForDestination(index: index)
                 .frame(width: 100)
@@ -1067,11 +1069,20 @@ struct ContentView: View {
         // Start UDP listeners
         for source in settings.udpSources where source.enabled {
             let listener = WSJTXUDPListener(name: source.name, sourceId: source.id)
+            let sourceName = source.name
 
             listener.onDecode = { decode, sourceId in
                 DispatchQueue.main.async {
                     self.handleDecode(decode, sourceId: sourceId)
                 }
+            }
+
+            // Feed every raw datagram to passthrough broadcast destinations.
+            // Fires on the listener's own queue, off the main thread — the
+            // broadcaster's sendto path is thread-safe (per-socket fd).
+            let broadcaster = udpBroadcaster
+            listener.onRawDatagram = { data, _ in
+                broadcaster.sendRaw(data, sourceName: sourceName)
             }
 
             listener.start(port: UInt16(source.port))

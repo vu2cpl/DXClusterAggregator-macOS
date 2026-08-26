@@ -4,7 +4,7 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.1
+**Current version:** v1.8.2
 **Last updated:** 2026-08-26
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
@@ -232,6 +232,24 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
+- **v1.8.2** — UDP passthrough. Adds a third broadcast destination format
+  (alongside `cluster` and `wsjtx`): **Passthrough** forwards every raw
+  incoming UDP datagram from allowed sources verbatim to the destination,
+  without parsing or per-spot re-emit. Restores RUMlogNG's click-to-fill
+  callsign lookup, which relied on WSJT-X-family Status updates (fired when
+  the operator clicks a decoded callsign in the decoder's list) reaching the
+  logger — DXCA's aggregated `wsjtx` format synthesises Status+Decode pairs
+  per spot and doesn't relay upstream Status messages, so click-to-fill went
+  silent when decoders were pointed at DXCA instead of RUMlog directly.
+  Implementation: new `.passthrough` case in `UDPBroadcastFormat`; new
+  `UDPBroadcaster.sendRaw(data:sourceName:)` iterating passthrough
+  destinations only; new `WSJTXUDPListener.onRawDatagram` callback fired
+  before parsing; orchestrator in `ContentView.startMonitoring()` wires the
+  callback to the broadcaster; Picker gets a "Passthrough" option with a
+  tooltip. When a passthrough destination and a `wsjtx` destination both
+  point at the same host:port, the `wsjtx` path skips the emit (see the
+  `continue` in the `broadcast` switch) — passthrough already carries the
+  original datagrams, so double-emit is prevented at the switch.
 - **2026-08-26** (docs) — Added [`docs/UDP-PIPELINE.md`](docs/UDP-PIPELINE.md)
   documenting the full MSHV + JTDX + WSJT-X + RUMlogNG + DXCA wiring with
   screenshots (`docs/images/udp-pipeline/*.png`), covering per-app config,

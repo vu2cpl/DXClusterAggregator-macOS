@@ -9,6 +9,13 @@ enum UDPBroadcastFormat: String, Equatable {
     /// per spot, suitable for tools like RBN Aggregator that listen for
     /// WSJT-X-format packets.
     case wsjtx
+    /// Raw passthrough — every UDP datagram received on any enabled source
+    /// is forwarded verbatim to this destination (subject to the
+    /// per-destination source allowlist). Used to preserve the original
+    /// WSJT-X binary stream end-to-end so a downstream logger (e.g. RUMlog)
+    /// still sees user-selection Status updates that DXCA's aggregated
+    /// per-spot re-emit would strip.
+    case passthrough
 
     init(rawString: String) {
         self = UDPBroadcastFormat(rawValue: rawString) ?? .cluster
@@ -124,10 +131,46 @@ final class UDPBroadcaster: ObservableObject {
                 } else {
                     ok = false
                 }
+            case .passthrough:
+                // Passthrough destinations are fed by `sendRaw` on every
+                // inbound datagram, not by the per-spot aggregation path.
+                // Skip here so the spot doesn't get double-emitted (once
+                // as raw upstream datagram, again as a synthesised pair).
+                continue
             }
             resultIds[dest.id] = ok
         }
 
+        DispatchQueue.main.async {
+            for id in attemptedIds {
+                if resultIds[id] == true {
+                    self.sentCounts[id, default: 0] += 1
+                } else {
+                    self.failCounts[id, default: 0] += 1
+                }
+            }
+        }
+    }
+
+    /// Forward one raw UDP datagram, as received from a source, verbatim to
+    /// every enabled passthrough destination that allows this source. Used to
+    /// keep the original WSJT-X binary stream flowing end-to-end so downstream
+    /// loggers still see user-selection Status updates (which the per-spot
+    /// aggregation path would otherwise strip).
+    func sendRaw(_ data: Data, sourceName: String) {
+        guard !data.isEmpty else { return }
+        var attemptedIds: [UUID] = []
+        var resultIds: [UUID: Bool] = [:]
+
+        for dest in destinations where dest.format == .passthrough {
+            let allowed = dest.allowedSources.isEmpty
+                || dest.allowedSources.contains(sourceName)
+            guard allowed else { continue }
+            attemptedIds.append(dest.id)
+            resultIds[dest.id] = send(data, to: dest)
+        }
+
+        if attemptedIds.isEmpty { return }
         DispatchQueue.main.async {
             for id in attemptedIds {
                 if resultIds[id] == true {
@@ -165,6 +208,17 @@ final class UDPBroadcaster: ObservableObject {
             guard let data = text.data(using: .utf8) else { return "encode failed" }
             payload = data
         case .wsjtx:
+            let pair = WSJTXMessageBuilder.encodeSpot(
+                callsign: "TEST",
+                frequencyHz: 14_074_000,
+                snr: 0,
+                mode: "FT8",
+                message: "CQ TEST"
+            )
+            payload = pair.status + pair.decode
+        case .passthrough:
+            // Same visible probe as WSJT-X — a passthrough destination just
+            // relays the WSJT-X binary stream from its sources.
             let pair = WSJTXMessageBuilder.encodeSpot(
                 callsign: "TEST",
                 frequencyHz: 14_074_000,
