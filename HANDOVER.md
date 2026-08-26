@@ -232,6 +232,19 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
+- **2026-08-26** (docs) — Drafted the **DXCA 2.0 port plan**:
+  [`docs/DXCA2-RUST-PLAN.md`](docs/DXCA2-RUST-PLAN.md). Design-only, nothing
+  implemented. DXCA 2.0 is a standalone Rust + Svelte-web-GUI successor
+  (working name `dxca`, private repo, not created yet) targeting a
+  Raspberry Pi as primary host — the SkimServer-Mac→Meridian pattern. The
+  DX-cluster telnet client/server engines get lifted from
+  `~/projects/meridian` (`meridian-core/src/dxcluster/`, ~2.9k lines);
+  new in Rust: the WSJT-X binary UDP codec, ClubLog/alert brain ports, and
+  a **multi-user login layer** so each user has their own ClubLog
+  credentials/matrix/alerts over one shared spot stream. The plan pins
+  parity requirements on this repo's v1.8.x behaviour (honest status,
+  passthrough, default ports) and an M6 dual-run validation against the
+  Mac app. Once 2.0 ships, this repo enters maintenance mode.
 - **v1.8.3** — Fix phantom fail counter for passthrough destinations.
   v1.8.2's per-spot `broadcast()` appended the destination to `attemptedIds`
   *before* the format switch, and the `.passthrough` case `continue`d without
@@ -333,6 +346,11 @@ committed to the repo (see conventions below).
 
 ## Open items
 
+- **DXCA 2.0 (Rust/Pi port) — plan drafted, awaiting go-ahead.** See
+  [`docs/DXCA2-RUST-PLAN.md`](docs/DXCA2-RUST-PLAN.md). Next concrete step is
+  M0: create the private `dxca` repo and scaffold the workspace. Until 2.0
+  ships, this repo remains the production DXCA and normal fixes continue to
+  land here (and inform the 2.0 parity spec).
 - **Window restore after display-topology change.** `WindowManager` currently
   deminiaturizes an existing window (v1.7.6 fix), but doesn't handle the case
   where the SwiftUI-managed window has been dropped entirely — e.g. after an
