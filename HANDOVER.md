@@ -374,8 +374,11 @@ committed to the repo (see conventions below).
   proven Live immediately, VE7CC honest-yellow). **While the burn-in runs,
   this 1.x app must stay closed** (port clash) — it is the standing
   fallback (`pkill -f target/release/dxca`, relaunch the app). 1.x fixes
-  still land here and inform the 2.0 parity spec. Next: M4 (users +
-  ClubLog/Telegram alerts — until then those features are 1.x-only).
+  still land here and inform the 2.0 parity spec. M4 same day: SQLite
+  users + session auth + per-user ClubLog matrices + Telegram fan-out,
+  exit-tested end to end; Manoj's account setup on the burn-in pending.
+  Next: M5 (the dashboard web UI — until then the spots table/LoTW
+  markers are 1.x-only).
 - **Window restore after display-topology change.** `WindowManager` currently
   deminiaturizes an existing window (v1.7.6 fix), but doesn't handle the case
   where the SwiftUI-managed window has been dropped entirely — e.g. after an
