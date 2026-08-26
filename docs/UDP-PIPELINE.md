@@ -18,21 +18,33 @@ processes ever try to bind the same port.
 
 ## Topology
 
+Each decoder sends **two** streams: live decodes (WSJT-X binary → DXCA on its
+own port) and completed-QSO ADIF (raw text → RUMlog directly on 2233,
+regardless of which decoder logged it).
+
 ```
-                  ┌─── UDP :2333 ───►  DXCA "MSHV" source
+                  ┌─── UDP :2333 ───►  DXCA "MSHV" source (decodes)
    MSHV  ─────────┤
-                  │
-                  └─── UDP :2233 ───►  RUMlogNG "QSOs received from Flex / ADIF"
-                                       (ADIF text — logged QSOs only)
+                  └─── UDP :2233 ───┐
+                                    │
+                  ┌─── UDP :2334 ───┼───►  DXCA "JTDX" source (decodes)
+   JTDX  ─────────┤                 │
+                  └─── UDP :2233 ───┤
+                                    │
+                  ┌─── UDP :2335 ───┼───►  DXCA "WSJTX" source (decodes)
+   WSJT-X ────────┤                 │
+                  └─── UDP :2233 ───┘
 
-   JTDX  ── UDP :2334 ───►  DXCA "JTDX" source
-
-   WSJT-X ── UDP :2335 ───►  DXCA "WSJTX" source
+                       (three senders, one port)
+                                    │
+                                    ▼
+                       RUMlogNG "QSOs received from Flex / ADIF"
+                       (ADIF text — logged QSOs only)
 
                                        ┌─►  TCP :7575  (local cluster server)
                                        │     RUMlogNG "DX Cluster" tab
                                        │     Logger32, N1MM+, Log4OM, MiniM4 Pro, …
-   DXCA aggregates all sources ────────┤
+   DXCA aggregates all decoders ───────┤
                                        │
                                        └─►  UDP :2237 (WSJT-X wire format)
                                              RUMlogNG "Data Port" (WSJT-X section)
@@ -40,16 +52,19 @@ processes ever try to bind the same port.
 
 ## Port allocation
 
-| Port  | Direction               | Producer      | Consumer               | Wire format          |
-|-------|-------------------------|---------------|------------------------|----------------------|
-| 2333  | UDP → 127.0.0.1         | MSHV          | DXCA "MSHV" source     | WSJT-X binary        |
-| 2334  | UDP → 127.0.0.1         | JTDX          | DXCA "JTDX" source     | WSJT-X binary        |
-| 2335  | UDP → 127.0.0.1         | WSJT-X        | DXCA "WSJTX" source    | WSJT-X binary        |
-| 2237  | UDP → 127.0.0.1         | DXCA          | RUMlogNG WSJT-X input  | WSJT-X binary        |
-| 2233  | UDP → 127.0.0.1         | MSHV          | RUMlogNG Flex/ADIF     | Raw ADIF text        |
-| 7575  | TCP LISTEN              | DXCA          | Any DX cluster client  | Cluster telnet lines |
+| Port  | Direction               | Producer                 | Consumer               | Wire format          |
+|-------|-------------------------|--------------------------|------------------------|----------------------|
+| 2333  | UDP → 127.0.0.1         | MSHV (decodes)           | DXCA "MSHV" source     | WSJT-X binary        |
+| 2334  | UDP → 127.0.0.1         | JTDX (decodes)           | DXCA "JTDX" source     | WSJT-X binary        |
+| 2335  | UDP → 127.0.0.1         | WSJT-X (decodes)         | DXCA "WSJTX" source    | WSJT-X binary        |
+| 2237  | UDP → 127.0.0.1         | DXCA rebroadcast         | RUMlogNG WSJT-X input  | WSJT-X binary        |
+| 2233  | UDP → 127.0.0.1         | MSHV, JTDX, WSJT-X (QSO logs) | RUMlogNG Flex/ADIF | Raw ADIF text        |
+| 7575  | TCP LISTEN              | DXCA                     | Any DX cluster client  | Cluster telnet lines |
 
-No port appears in the "Consumer" column twice. That is the invariant.
+No port appears in the "Consumer" column twice. That is the invariant. Port
+2233 has three producers, but they are all sending (`sendto`) — none binds it
+— so they never collide; RUMlog is the only listener and reads whichever ADIF
+record arrives.
 
 ## Per-app configuration
 
@@ -102,21 +117,54 @@ below.
 
 ### 3. JTDX
 
-**File → Settings → Reporting** tab → *UDP Server* group:
+**JTDX menu → Preferences...** → **Reporting** tab.
 
-- UDP Server: `127.0.0.1`
-- UDP Server port number: `2334`
-- ✓ Accept UDP requests
-- ✓ Notify on accepted UDP request
+![JTDX Reporting — Primary UDP Server + 2nd UDP server for ADIF](images/udp-pipeline/05-jtdx-reporting.png)
+
+Two independent outputs on this tab — set both:
+
+- **Primary UDP Server** (bottom half, feeds DXCA):
+  - UDP Server: `127.0.0.1`
+  - UDP Server port number: `2334`
+  - ✓ Accept UDP requests
+  - Leave *Enable sending logged QSO ADIF data* **unchecked** here — the
+    ADIF path is the *secondary UDP*, not this one.
+- **Send logged QSO ADIF data** (top-right, feeds RUMlog directly):
+  - 2nd UDP server: `127.0.0.1`
+  - UDP port: `2233`
+  - ✓ Enable sending to secondary UDP
+  - Leave the TCP server row empty and *Enable sending to TCP server*
+    unchecked — nothing on this shack listens on JTDX's ADIF-over-TCP.
+
+The 2nd UDP path is JTDX's equivalent to MSHV's Simplified UDP Broadcast.
+Both target the same RUMlog listener (`127.0.0.1:2233`).
 
 ### 4. WSJT-X
 
-**File → Settings → Reporting** tab → *UDP Server* group:
+**WSJT-X menu → Preferences...** → **Reporting** tab.
 
-- UDP Server: `127.0.0.1`
-- UDP Server port number: `2335`
-- ✓ Accept UDP requests
-- ✓ Notify on accepted UDP request
+![WSJT-X Reporting — UDP Server + Secondary UDP Server for ADIF](images/udp-pipeline/06-wsjtx-reporting.png)
+
+Same two-output pattern as JTDX:
+
+- **UDP Server** (feeds DXCA):
+  - UDP Server: `127.0.0.1`
+  - UDP Server port number: `2335`
+  - Outgoing interfaces: `lo0` (loopback only — no packets on the LAN)
+  - Multicast TTL: `1` (unused here; we're not multicasting)
+- **Secondary UDP Server (deprecated)** (feeds RUMlog directly):
+  - ✓ Enable logged contact ADIF broadcast
+  - Server name or IP address: `127.0.0.1`
+  - **Server port number: `2233`** ← this must match RUMlog's Flex/ADIF
+    listener, not any DXCA input port. Sending to 2333 (DXCA's MSHV input)
+    is a common misconfiguration — DXCA's `WSJTXMessageParser` will reject
+    the ADIF text as malformed WSJT-X binary and drop it silently, and
+    RUMlog will never see the logged QSO.
+
+WSJT-X labels this section *deprecated*; it still works and is the only
+built-in path for logged-contact ADIF-over-UDP that WSJT-X ships with, so it
+stays in use until the project offers a replacement. When they do, the
+replacement will still need to target `127.0.0.1:2233`.
 
 ### 5. RUMlogNG
 
@@ -168,12 +216,18 @@ port. That is the working MSHV → RUMlog QSO-logging path.
 what we discussed while wiring DXCA), but it's the **only** path for MSHV's
 *logged QSOs* to reach RUMlog. Keep it enabled.
 
-JTDX and WSJT-X have no equivalent to the Simplified feed — RUMlogNG picks
-up their QSO log records via the WSJT-X type-5 messages on the main feed,
-which DXCA does drop, so JTDX/WSJT-X logs today rely on other paths (ADIF file
-import, ClubLog, or RUMlog's own logbook edited by hand). If you want their
-completed QSOs to feed RUMlog automatically over UDP, you'd need to add
-type-5 pass-through to DXCA — currently out of scope.
+JTDX and WSJT-X have the same pattern — a *primary* UDP for live
+decodes/status (WSJT-X binary → DXCA) and a *secondary* UDP for logged-QSO
+ADIF text → RUMlog. In JTDX that's *"Send logged QSO ADIF data → 2nd UDP
+server"*; in WSJT-X it's *"Secondary UDP Server (deprecated) → Enable logged
+contact ADIF broadcast"*. Both must target `127.0.0.1:2233`, matching MSHV's
+Simplified UDP Broadcast and RUMlog's Flex/ADIF listener. See §3 and §4 for
+screenshots.
+
+That means all three decoders reach RUMlog's log the same way (raw ADIF on
+2233), and RUMlog's WSJT-X binary listener on 2237 stays reserved for DXCA's
+rebroadcast of *live spots* — no QSO-log traffic goes through DXCA at all,
+so DXCA's `default: break` on WSJT-X type-5 / type-12 is fine.
 
 ## Reboot survival
 

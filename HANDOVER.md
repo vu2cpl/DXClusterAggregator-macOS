@@ -317,13 +317,12 @@ committed to the repo (see conventions below).
   not only reorder/deminiaturize.
 - **DXCA drops WSJT-X type-5 (QSO Logged) and type-12 (ADIF Log) datagrams.**
   `WSJTXUDPListener.processMessage` handles only `.status` and `.decode`;
-  everything else falls into `default: break`. That means JTDX / WSJT-X
-  completed-QSO records never reach RUMlog via DXCA's rebroadcaster — users
-  have to rely on ADIF file import or other paths for those two decoders.
-  MSHV works around this by sending logged QSOs on its Simplified UDP
-  Broadcast (raw ADIF on a different port) directly to RUMlog. If a user
-  asks for JTDX/WSJT-X → RUMlog QSO logging via UDP, add type-5 (and maybe
-  type-12) pass-through to the broadcaster. See
+  everything else falls into `default: break`. Not currently a problem —
+  every decoder has its own ADIF-over-UDP path to RUMlog (MSHV *Simplified
+  UDP Broadcast*, JTDX *2nd UDP server*, WSJT-X *Secondary UDP Server*),
+  all targeting `127.0.0.1:2233`, bypassing DXCA entirely. Would only
+  become worth fixing if someone wants QSO logs to flow through DXCA
+  specifically (e.g. to fan them out to a second logger). See
   [`docs/UDP-PIPELINE.md`](docs/UDP-PIPELINE.md) for the current wiring.
 - `SpotMessage.dxCallsign`'s `looksLikeCallsign` heuristic is defensive but not
   exhaustive — pathological FT8 messages could still slip a non-call into the
