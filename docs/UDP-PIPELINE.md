@@ -1,5 +1,31 @@
 # The Shack UDP Pipeline — MSHV + JTDX + WSJT-X → DXCA → RUMlogNG
 
+> ## ⚡ Current wiring (since 2026-08-27): DXCA 2.0 on noderedpi4
+>
+> The aggregator is now **dxca v2.0.0** (Rust, repo `vu2cpl/dxca`) running
+> as a systemd service on **noderedpi4 (192.168.1.169)**. Same pipeline
+> shape, one IP change:
+>
+> | Leg | Now |
+> |---|---|
+> | MSHV UDP Broadcast | `192.168.1.169:2333` |
+> | JTDX primary UDP | `192.168.1.169:2334` |
+> | WSJT-X UDP server | `192.168.1.169:2335` |
+> | Decoder ADIF (QSO logs) → RUMlog | `127.0.0.1:2233` — **unchanged, stays local** |
+> | dxca passthrough → RUMlog Data Port | `192.168.10.226:2237` (the Mac) |
+> | RUMlog DX Cluster tab / any logger | `192.168.1.169:7575` |
+> | Web dashboard + config | `http://192.168.1.169:7580` |
+>
+> Sources, cluster nodes, and destinations are edited in the web UI
+> (System tab, hot-applies). Service ops on the Pi:
+> `systemctl status/restart dxca`.
+>
+> **Everything below documents the 1.x-era wiring (decoders →
+> 127.0.0.1, this macOS app as aggregator). It is kept as the fallback
+> runbook**: to roll back, stop the Pi service
+> (`sudo systemctl stop dxca`), point the decoders and RUMlog back at
+> `127.0.0.1` per the sections below, and launch DXClusterAggregator.app.
+
 Wiring three FT8/FT4 decoders (MSHV, JTDX, WSJT-X) and a logger (RUMlogNG) so
 they run **simultaneously**, share every decoded spot, and don't fight over UDP
 ports at reboot.

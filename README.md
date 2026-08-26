@@ -1,5 +1,11 @@
 # DXClusterAggregator for macOS
 
+> **Maintenance mode** (since 2026-08-27): superseded by **DXCA 2.0** — a
+> Rust rewrite with a multi-user web GUI that runs the shack from a
+> Raspberry Pi (private repo `vu2cpl/dxca`, v2.0.0). This app remains the
+> tested macOS fallback: fixes land as needed, no new features planned.
+> Do not run it while a dxca instance holds the same UDP/telnet ports.
+
 A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JTDX instances and DX Cluster nodes into a unified telnet cluster server.
 
 ## Features

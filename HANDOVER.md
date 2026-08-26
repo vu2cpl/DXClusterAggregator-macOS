@@ -4,7 +4,9 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.4
+**Current version:** v1.8.4 · **MAINTENANCE MODE** — superseded by
+DXCA 2.0 (`vu2cpl/dxca`), in production on noderedpi4 since
+2026-08-27. This app is the tested fallback; fixes only.
 **Last updated:** 2026-08-27
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
@@ -382,10 +384,11 @@ committed to the repo (see conventions below).
   management. Manoj's admin account exists on the burn-in. **M6 done same day:
   v2.0.0 tagged + released** (binaries attached), the Mac runs it as a
   launchd agent, and noderedpi4 (192.168.1.169) has it installed as a
-  systemd service, standing by. One box left: the decoder cutover —
-  checklist in the dxca HANDOVER. After cutover this repo flips to
-  maintenance mode and docs/UDP-PIPELINE.md gets the Pi-centred
-  rewrite.
+  systemd service, standing by. The decoder cutover completed the
+  same evening — **production DXCA is the Pi**; this repo is in
+  maintenance mode (README banner, UDP-PIPELINE current-wiring
+  section). Rollback path: stop the Pi service, decoders back to
+  127.0.0.1, launch this app.
 - **Window restore after display-topology change.** `WindowManager` currently
   deminiaturizes an existing window (v1.7.6 fix), but doesn't handle the case
   where the SwiftUI-managed window has been dropped entirely — e.g. after an
