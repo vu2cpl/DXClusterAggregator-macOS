@@ -369,11 +369,13 @@ committed to the repo (see conventions below).
   noderedpi4; M1 core-logic ports with exact parity against this app's
   own matrix.json; M2 spot path validated live — dxca took over ports
   2333/2334/2335 + 7575 on the Mac, RUMlog populated and click-to-fill
-  worked. **While the burn-in runs, this 1.x app must stay closed** (port
-  clash) — it is the standing fallback (`pkill -f target/release/dxca`,
-  relaunch the app). 1.x fixes still land here and inform the 2.0 parity
-  spec. Next: M3 (cluster-node ingest — until then dxca has no DX-cluster
-  nodes, so cluster-spot features are 1.x-only).
+  worked. M3 same day: the Meridian-lifted cluster client with the 1.8.x
+  honest-status graft ingests all five shack nodes in the burn-in (four
+  proven Live immediately, VE7CC honest-yellow). **While the burn-in runs,
+  this 1.x app must stay closed** (port clash) — it is the standing
+  fallback (`pkill -f target/release/dxca`, relaunch the app). 1.x fixes
+  still land here and inform the 2.0 parity spec. Next: M4 (users +
+  ClubLog/Telegram alerts — until then those features are 1.x-only).
 - **Window restore after display-topology change.** `WindowManager` currently
   deminiaturizes an existing window (v1.7.6 fix), but doesn't handle the case
   where the SwiftUI-managed window has been dropped entirely — e.g. after an
