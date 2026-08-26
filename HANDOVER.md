@@ -5,7 +5,7 @@ to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
 **Current version:** v1.8.1
-**Last updated:** 2026-08-24
+**Last updated:** 2026-08-26
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -177,13 +177,30 @@ committed to the repo (see conventions below).
 
 ## Integration & operating notes
 
+- **Multi-app UDP topology (MSHV + JTDX + WSJT-X + RUMlogNG + DXCA):** the
+  canonical wiring is documented in
+  [`docs/UDP-PIPELINE.md`](docs/UDP-PIPELINE.md) — with screenshots of every
+  panel. The rule: DXCA is the sole listener on every WSJT-X port; each
+  decoder targets a distinct DXCA input port (2333 MSHV / 2334 JTDX / 2335
+  WSJT-X); DXCA rebroadcasts every spot in WSJT-X wire format to
+  `127.0.0.1:2237` where RUMlog's WSJT-X Data Port picks it up. MSHV also
+  runs a **Simplified UDP Broadcast** to `127.0.0.1:2233` (raw ADIF) which
+  RUMlog consumes on its "QSOs received from Flex / ADIF" listener — the
+  *only* working MSHV → RUMlog logged-QSO path, because DXCA's
+  `WSJTXUDPListener.processMessage` drops WSJT-X type-5 / type-12 in its
+  `default: break`. This setup survives any reboot order (every port has
+  exactly one binder). Add this to the checklist when a user reports
+  "aggregator is hung after a reboot" — usually it's another app racing to
+  grab a WSJT-X port at login. Read the doc before touching any port number.
 - **RUMlog has two separate listening modes — don't confuse them:**
-  - *WSJT-X port* (e.g. 2347) = QSO-logging integration; it listens for
-    `QSO Logged` (type 5) messages only and ignores decode-derived spots, so
-    sending Status+Decode pairs there is pointless.
+  - *WSJT-X port* (Data Port, default 2237) = QSO-logging + dx-spot-table
+    ingest; it consumes WSJT-X binary datagrams (Status/Decode for the
+    dx-spot table, QSO Logged for the log). This is where DXCA rebroadcasts.
   - *DX Cluster tab* = a TCP cluster client. Point it at our local cluster
-    server (`127.0.0.1:7575`) to get spots in RUMlog's DX Spots window — this
-    is the right path for cluster spots.
+    server (`127.0.0.1:7575`) to get spots in RUMlog's DX Spots window.
+  Both paths can feed the DX Spots table simultaneously; duplicates are
+  expected. Disable "Populate dx-spot table" under WSJT-X (or disconnect the
+  cluster tab from DXCA) to pick a single source.
 - **Single-session-per-callsign clusters** (e.g. N2WQ allow one login per
   call). If your call is already connected from another client, set the
   cluster row's **Username** to `CALLSIGN-N` (any AX.25 SSID `-1`…`-15`); the
@@ -215,6 +232,15 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
+- **2026-08-26** (docs) — Added [`docs/UDP-PIPELINE.md`](docs/UDP-PIPELINE.md)
+  documenting the full MSHV + JTDX + WSJT-X + RUMlogNG + DXCA wiring with
+  screenshots (`docs/images/udp-pipeline/*.png`), covering per-app config,
+  port allocation, why "Simplified UDP Broadcast" is a separate path for
+  MSHV → RUMlog QSO logging, reboot-race troubleshooting, and the
+  `lsof`/Skywalk blindness caveat. Motivated by a post-OS-update hang where
+  RUMlogNG's login-item raced DXCA to bind UDP 2237 — reproducible any time
+  two apps compete for the same WSJT-X port; the canonical topology removes
+  every collision by giving each decoder a distinct DXCA input port.
 - **v1.8.1** — Status cell → clickable pill (operator feedback on v1.8.0:
   fonts too small; wanted the shack Vue dashboard's pill style — indicator
   and button in one). `ClusterStatusCell` is now a tinted capsule (11.5 pt
@@ -258,7 +284,11 @@ committed to the repo (see conventions below).
   and `applicationShouldHandleReopen` now call `deminiaturize(nil)` when the
   window is sitting in the Dock as a thumbnail. Previously `makeKeyAndOrderFront`
   alone only reordered z-stack, leaving the window minimised — the menu-bar
-  "Show Window" entry appeared to do nothing.
+  "Show Window" entry appeared to do nothing. (Note: does **not** cover the
+  case where a display-topology change during an OS update leaves the saved
+  window frame off-screen or dropped entirely; observed 2026-08-26. A
+  hardening pass in `WindowManager` to re-create the window when none exists
+  is a separate open item.)
 - **v1.7.5** — Memory hardening: independent size caps on `notificationCooldown`
   and the `DXClusterClient` line buffer so neither grows unbounded during long
   uptime with auto-clear disabled. Fixed the default TCP cluster port
@@ -276,6 +306,25 @@ committed to the repo (see conventions below).
 
 ## Open items
 
+- **Window restore after display-topology change.** `WindowManager` currently
+  deminiaturizes an existing window (v1.7.6 fix), but doesn't handle the case
+  where the SwiftUI-managed window has been dropped entirely — e.g. after an
+  OS update whose reboot changes the display arrangement and the saved frame
+  lands off-screen or the scene state is discarded. Observed on 2026-08-26:
+  menu-bar "Show Window" was a no-op. Workaround: quit and relaunch the app.
+  Fix: `showMainWindow` should re-create the window (via `NSApp.windows`
+  scan → `openWindow(id:)` or an explicit `NSWindow` init) when none exists,
+  not only reorder/deminiaturize.
+- **DXCA drops WSJT-X type-5 (QSO Logged) and type-12 (ADIF Log) datagrams.**
+  `WSJTXUDPListener.processMessage` handles only `.status` and `.decode`;
+  everything else falls into `default: break`. That means JTDX / WSJT-X
+  completed-QSO records never reach RUMlog via DXCA's rebroadcaster — users
+  have to rely on ADIF file import or other paths for those two decoders.
+  MSHV works around this by sending logged QSOs on its Simplified UDP
+  Broadcast (raw ADIF on a different port) directly to RUMlog. If a user
+  asks for JTDX/WSJT-X → RUMlog QSO logging via UDP, add type-5 (and maybe
+  type-12) pass-through to the broadcaster. See
+  [`docs/UDP-PIPELINE.md`](docs/UDP-PIPELINE.md) for the current wiring.
 - `SpotMessage.dxCallsign`'s `looksLikeCallsign` heuristic is defensive but not
   exhaustive — pathological FT8 messages could still slip a non-call into the
   callsign column. Revisit if a user reports it.

@@ -209,7 +209,8 @@ cp -r DXClusterAggregator.app /Applications/
 
 ## Documentation
 
-See the [User Manual (PDF)](DXClusterAggregator_UserManual.pdf) for detailed instructions.
+- [User Manual (PDF)](DXClusterAggregator_UserManual.pdf) — detailed feature reference.
+- [Shack UDP Pipeline](docs/UDP-PIPELINE.md) — how to wire MSHV + JTDX + WSJT-X together with RUMlogNG through DXCA so they all run at once without port collisions. Screenshots of every panel. Start here if you're setting up a multi-decoder shack.
 
 ## Credits
 
