@@ -158,7 +158,7 @@ struct ContentView: View {
 
         let toRemove = spots.filter { $0.time < cutoff }
         if !toRemove.isEmpty {
-            SpotLogger.append(toRemove)
+            SpotLogger.append(toRemove, maxMB: settings.spotLogMaxMB)
             spots.removeAll { $0.time < cutoff }
         }
 
@@ -185,7 +185,7 @@ struct ContentView: View {
             }
             .help("Collapse the settings panel for more space")
 
-            Text("v1.8.3 (macOS)")
+            Text("v1.8.4 (macOS)")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -211,6 +211,15 @@ struct ContentView: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 70)
                 }
+
+                HStack {
+                    Text("Spot Log Cap:")
+                    TextField("100", text: settings.spotLogMaxMBString)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 55)
+                    Text("MB").foregroundColor(.secondary)
+                }
+                .help("Size cap for the on-disk spot log (DXC Spots.txt in Application Support). When the file grows past this, the oldest entries are trimmed away. Set to 0 for unlimited.")
             }
 
             broadcastDestinationsSection
@@ -1591,7 +1600,7 @@ struct ContentView: View {
 
     private func clearSpots() {
         // Persist the current list before wiping so spot history is preserved.
-        SpotLogger.append(spots)
+        SpotLogger.append(spots, maxMB: settings.spotLogMaxMB)
         spots.removeAll()
     }
 

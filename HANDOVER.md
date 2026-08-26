@@ -4,8 +4,8 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.3
-**Last updated:** 2026-08-26
+**Current version:** v1.8.4
+**Last updated:** 2026-08-27
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -50,6 +50,7 @@ Mode), LoTW-user marking, beacon detection, and macOS + Telegram notifications.
 | TCP cluster server port | `7575` (NOT 7550 — avoids SkimSrv's 7300/7550 defaults) |
 | UDP Broadcast 1 | `127.0.0.1:2236` |
 | Auto-clear window | `60` min (0 = disabled) |
+| Spot log size cap (`DXC Spots.txt`) | `100` MB (0 = unlimited; trims oldest lines to ~75% of cap) |
 | DX cluster auto-reconnect backoff | `10s → 30s → 60s → 120s → 300s` (last repeats) |
 
 Settings persist via `@AppStorage` (`Models/Settings.swift`), Codable and
@@ -245,6 +246,19 @@ committed to the repo (see conventions below).
   parity requirements on this repo's v1.8.x behaviour (honest status,
   passthrough, default ports) and an M6 dual-run validation against the
   Mac app. Once 2.0 ships, this repo enters maintenance mode.
+- **v1.8.4** — Size cap on the on-disk spot log. `SpotLogger` appended pruned
+  spots to `DXC Spots.txt` forever with no rotation — the live file had
+  reached **520 MB**. Now `SpotLogger.append(_:maxMB:)` enforces a cap after
+  every append: when the file exceeds it, the newest ~75% of the cap is kept
+  (whole lines, seek-from-end so the old bulk is never read into memory) and
+  rewritten atomically with the header restored; 75% rather than 100% gives
+  hysteresis so the rewrite runs once every few days, not per append. New
+  setting `spotLogMaxMB` (default 100, range 0–1024, 0 = unlimited/old
+  behaviour) follows the `autoClearMinutes` @AppStorage + clamped-string-
+  binding pattern; UI is a "Spot Log Cap" field in the configuration row next
+  to TCP Cluster Port. An existing oversized file self-heals on the first
+  prune/clear after upgrade (520 MB → ~75 MB in one trim). Manual §
+  "Auto-Clear + Spot Log File" extended; PDF regenerated.
 - **v1.8.3** — Fix phantom fail counter for passthrough destinations.
   v1.8.2's per-spot `broadcast()` appended the destination to `attemptedIds`
   *before* the format switch, and the `.passthrough` case `continue`d without

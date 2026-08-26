@@ -17,7 +17,7 @@ A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JT
 - **Sortable / resizable spots table** — click any column to sort, drag between headers to resize
 - **Live filters** — Sources dropdown, Bands dropdown, New Only, Hide Duplicates (60s window)
 - **Auto Start on Launch + Hide on Start** — runs as a menu-bar background service
-- **Auto-clear with disk log** — prune old spots (0-120 min); pruned spots are appended to `DXC Spots.txt`
+- **Auto-clear with disk log** — prune old spots (0-120 min); pruned spots are appended to `DXC Spots.txt`, size-capped (default 100 MB, configurable, 0 = unlimited) with the oldest entries trimmed away automatically
 - **Universal binary** — native on both Apple Silicon and Intel Macs
 - **Persistent settings** — all configuration saved automatically (backward-compatible Codable)
 
@@ -140,9 +140,9 @@ cat > DXClusterAggregator.app/Contents/Info.plist << 'EOF'
     <key>CFBundleIdentifier</key>
     <string>com.vu2cpl.dxclusteraggregator</string>
     <key>CFBundleVersion</key>
-    <string>1.8.3</string>
+    <string>1.8.4</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.8.3</string>
+    <string>1.8.4</string>
     <key>CFBundleExecutable</key>
     <string>DXClusterAggregator</string>
     <key>CFBundlePackageType</key>
@@ -204,6 +204,7 @@ cp -r DXClusterAggregator.app /Applications/
 | WSJT-X UDP Port | 2237 |
 | TCP Cluster Port | 7575 |
 | Broadcast 1 | 127.0.0.1:2236 |
+| Spot Log Cap | 100 MB (0 = unlimited) |
 
 > **Why 7575?** CW Skimmer Server (SkimSrv) on Windows defaults to ports 7300 and 7550, so the aggregator's telnet server defaults to **7575** to avoid clashing when both run on the same network.
 

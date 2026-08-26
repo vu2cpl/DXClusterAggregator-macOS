@@ -231,7 +231,7 @@ def build_cover():
     elements.append(Spacer(1, 8 * mm))
     elements.append(Paragraph("User Manual", styles['CoverSubtitle']))
     elements.append(Spacer(1, 4 * mm))
-    elements.append(Paragraph("Version 1.8.3", styles['CoverVersion']))
+    elements.append(Paragraph("Version 1.8.4", styles['CoverVersion']))
     elements.append(Spacer(1, 30 * mm))
 
     elements.append(Paragraph("Aggregate FT8/FT4 spots from multiple WSJT-X/JTDX instances", styles['Credits']))
@@ -456,7 +456,7 @@ def build_content():
         ['CFBundleName', 'DXClusterAggregator'],
         ['CFBundleDisplayName', 'DX Cluster Aggregator'],
         ['CFBundleIdentifier', 'com.vu2cpl.dxclusteraggregator'],
-        ['CFBundleVersion', '1.8.3'],
+        ['CFBundleVersion', '1.8.4'],
         ['CFBundleExecutable', 'DXClusterAggregator'],
         ['CFBundlePackageType', 'APPL'],
         ['CFBundleIconFile', 'AppIcon'],
@@ -1240,6 +1240,15 @@ def build_content():
         "spots are appended to ~/Library/Application Support/DXClusterAggregator/DXC Spots.txt "
         "(tab-separated with a header). The manual <b>Clear</b> button also writes to the same "
         "file. Setting auto-clear to 0 disables the prune.",
+        styles['Body']
+    ))
+    elements.append(Paragraph(
+        "The log file is size-capped via the <b>Spot Log Cap</b> field in the configuration "
+        "row (default 100 MB, range 0-1024). When an append pushes the file past the cap, "
+        "the oldest entries are trimmed away automatically (the file is cut back to about "
+        "75% of the cap, so the trim only runs occasionally). Set the cap to 0 to keep "
+        "every spot forever - note the file then grows without bound (hundreds of MB over "
+        "a few months of continuous monitoring).",
         styles['Body']
     ))
 

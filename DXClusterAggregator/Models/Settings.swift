@@ -83,6 +83,23 @@ class AppSettings: ObservableObject {
         )
     }
 
+    /// Size cap in MB for the on-disk spot log "DXC Spots.txt" (0 = unlimited).
+    /// When an append pushes the file over the cap, SpotLogger trims it in
+    /// place to ~75% of the cap, dropping the oldest lines. Without a cap the
+    /// file grows forever (observed at 520 MB after months of auto-clear).
+    /// Range clamped to 0...1024 by the UI.
+    @AppStorage("spotLogMaxMB") var spotLogMaxMB: Int = 100
+
+    var spotLogMaxMBString: Binding<String> {
+        Binding<String>(
+            get: { String(self.spotLogMaxMB) },
+            set: {
+                let v = Int($0) ?? self.spotLogMaxMB
+                self.spotLogMaxMB = max(0, min(1024, v))
+            }
+        )
+    }
+
     @Published var udpSources: [UDPSource] {
         didSet { saveCodable(udpSources, key: "udpSources") }
     }
