@@ -4,9 +4,13 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.4 · **MAINTENANCE MODE** — superseded by
-DXCA 2.0 (`vu2cpl/dxca`), in production on noderedpi4 since
-2026-08-27. This app is the tested fallback; fixes only.
+**Current version:** v1.8.4 (released + notarized 2026-08-27 — the final
+feature release) · **SHELVED / MAINTENANCE MODE** — superseded by DXCA
+2.0 (`vu2cpl/dxca`), in production on noderedpi4 since 2026-08-27. This
+app is the tested fallback: no planned work, fixes only if the fallback
+is ever needed. The v1.8.4 GitHub release carries the notarized
+universal zip; the release pipeline (`./notarize.sh`) remains fully
+scripted should a fix ever warrant a v1.8.5.
 **Last updated:** 2026-08-27
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
