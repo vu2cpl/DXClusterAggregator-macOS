@@ -11,7 +11,7 @@
 > | MSHV UDP Broadcast | `192.168.1.169:2333` |
 > | JTDX primary UDP | `192.168.1.169:2334` |
 > | WSJT-X UDP server | `192.168.1.169:2335` |
-> | Decoder ADIF (QSO logs) → RUMlog | `127.0.0.1:2233` — **unchanged, stays local** |
+> | Decoder ADIF (QSO logs) → RUMlog | **not needed — see below.** Logged QSOs ride the ordinary decoder feed through dxca's passthrough |
 > | dxca passthrough → RUMlog Data Port | `192.168.10.226:2237` (the Mac) |
 > | RUMlog DX Cluster tab / any logger | `192.168.1.169:7575` |
 > | Web dashboard + config | `http://192.168.1.169:7580` |
@@ -55,38 +55,29 @@ processes ever try to bind the same port, and every WSJT-X message type
 
 ## Topology
 
-Each decoder sends **two** streams: live decodes (WSJT-X binary → DXCA on its
-own port) and completed-QSO ADIF (raw text → RUMlog directly on 2233,
-regardless of which decoder logged it).
+Each decoder sends **one** stream: its ordinary WSJT-X feed to DXCA on its own
+port. Logged QSOs are *part of that stream* (WSJT-X type-5), and passthrough
+carries them to RUMlog along with everything else — so there is no second
+ADIF-over-UDP leg to configure. See [Logged QSOs need no second
+feed](#logged-qsos-need-no-second-feed).
 
 ```
-                  ┌─── UDP :2333 ───►  DXCA "MSHV" source (decodes)
-   MSHV  ─────────┤
-                  └─── UDP :2233 ───┐
-                                    │
-                  ┌─── UDP :2334 ───┼───►  DXCA "JTDX" source (decodes)
-   JTDX  ─────────┤                 │
-                  └─── UDP :2233 ───┤
-                                    │
-                  ┌─── UDP :2335 ───┼───►  DXCA "WSJTX" source (decodes)
-   WSJT-X ────────┤                 │
-                  └─── UDP :2233 ───┘
+   MSHV  ───────── UDP :2333 ───►  DXCA "MSHV" source
+   JTDX  ───────── UDP :2334 ───►  DXCA "JTDX" source
+   WSJT-X ──────── UDP :2335 ───►  DXCA "WSJTX" source
 
-                       (three senders, one port)
-                                    │
-                                    ▼
-                       RUMlogNG "QSOs received from Flex / ADIF"
-                       (ADIF text — logged QSOs only)
+        (decodes, status AND logged QSOs — one socket each)
 
                                        ┌─►  TCP :7575  (local cluster server)
                                        │     RUMlogNG "DX Cluster" tab
                                        │     Logger32, N1MM+, Log4OM, MiniM4 Pro, …
    DXCA aggregates all decoders ───────┤
                                        │
-                                       └─►  UDP :2237  (Passthrough — raw
-                                             WSJT-X datagrams forwarded from
-                                             all sources verbatim, keeps
-                                             click-to-fill working)
+                                       └─►  UDP :2237  (Passthrough — every raw
+                                             WSJT-X datagram forwarded from all
+                                             sources verbatim: decodes, the
+                                             click-to-fill Status stream, and
+                                             logged QSOs)
                                              RUMlogNG "Data Port" (WSJT-X section)
 ```
 
@@ -98,13 +89,17 @@ regardless of which decoder logged it).
 | 2334  | UDP → 127.0.0.1         | JTDX (decodes)           | DXCA "JTDX" source     | WSJT-X binary        |
 | 2335  | UDP → 127.0.0.1         | WSJT-X (decodes)         | DXCA "WSJTX" source    | WSJT-X binary        |
 | 2237  | UDP → 127.0.0.1         | DXCA passthrough         | RUMlogNG WSJT-X input  | WSJT-X binary (raw)  |
-| 2233  | UDP → 127.0.0.1         | MSHV, JTDX, WSJT-X (QSO logs) | RUMlogNG Flex/ADIF | Raw ADIF text        |
 | 7575  | TCP LISTEN              | DXCA                     | Any DX cluster client  | Cluster telnet lines |
 
-No port appears in the "Consumer" column twice. That is the invariant. Port
-2233 has three producers, but they are all sending (`sendto`) — none binds it
-— so they never collide; RUMlog is the only listener and reads whichever ADIF
-record arrives.
+No port appears in the "Consumer" column twice. That is the invariant.
+
+**Port 2233 is no longer part of this pipeline.** Earlier revisions of this
+doc routed each decoder's logged-QSO ADIF there, to RUMlog's "QSOs received
+from Flex / ADIF" listener. That leg was always redundant — see [Logged QSOs
+need no second feed](#logged-qsos-need-no-second-feed) — and the shack does
+not use it. Nothing breaks if you leave an old 2233 configuration in place;
+RUMlog would simply log each QSO from whichever path arrives first, and
+ignore the duplicate.
 
 ## Per-app configuration
 
@@ -153,20 +148,20 @@ Menu → **Options → Network Configuration** → *Network Configuration* tab.
 
 ![MSHV Network Configuration — UDP Broadcast and Simplified UDP Broadcast](images/udp-pipeline/03-mshv-network-config.png)
 
+**MSHV is the only one of the three that needs anything beyond its port.**
+
 - **UDP Broadcast Settings** (the WSJT-X-compatible binary feed):
   - Server `127.0.0.1`, Port `2333`
-  - **Enable Decoded Text** ✓ (this is what DXCA needs)
-  - **Enable Logged QSO** ✗
-  - **Enable Logged QSO ADIF** ✗
+  - **Enable Decoded Text** ✓ (the spots)
+  - **Enable Logged QSO** ✓ ← **tick this.** It is what puts your logged
+    QSOs on the same socket, so passthrough carries them to RUMlog. MSHV
+    ships with it off, and it is the single setting people miss.
+  - **Enable Logged QSO ADIF** ✗ (type-12; RUMlog reads the type-5 above)
 
   Status line should turn green: `Connected to localhost IP 127.0.0.1`.
 
-- **Simplified UDP Broadcast** (raw ADIF text — separate, for RUMlog logging):
-  - Server `127.0.0.1`, Port `2233`
-  - **Enable Logged QSO ADIF** ✓
-
-The two are not interchangeable — see [Why two MSHV feeds?](#why-two-mshv-feeds)
-below.
+- **Simplified UDP Broadcast** — **not needed.** Leave it off. See [Logged
+  QSOs need no second feed](#logged-qsos-need-no-second-feed).
 
 ### 3. JTDX
 
@@ -174,23 +169,19 @@ below.
 
 ![JTDX Reporting — Primary UDP Server + 2nd UDP server for ADIF](images/udp-pipeline/05-jtdx-reporting.png)
 
-Two independent outputs on this tab — set both:
+Only one output to set:
 
 - **Primary UDP Server** (bottom half, feeds DXCA):
   - UDP Server: `127.0.0.1`
   - UDP Server port number: `2334`
   - ✓ Accept UDP requests
-  - Leave *Enable sending logged QSO ADIF data* **unchecked** here — the
-    ADIF path is the *secondary UDP*, not this one.
-- **Send logged QSO ADIF data** (top-right, feeds RUMlog directly):
-  - 2nd UDP server: `127.0.0.1`
-  - UDP port: `2233`
-  - ✓ Enable sending to secondary UDP
-  - Leave the TCP server row empty and *Enable sending to TCP server*
-    unchecked — nothing on this shack listens on JTDX's ADIF-over-TCP.
 
-The 2nd UDP path is JTDX's equivalent to MSHV's Simplified UDP Broadcast.
-Both target the same RUMlog listener (`127.0.0.1:2233`).
+That is the whole JTDX configuration. Unlike MSHV there is no checkbox to
+tick for logged QSOs — JTDX puts them on the primary UDP server itself.
+
+- **2nd UDP server / *Enable sending to secondary UDP*** — **not needed.**
+  Leave unchecked. Same for the TCP server row: nothing on this shack
+  listens on JTDX's ADIF-over-TCP.
 
 ### 4. WSJT-X
 
@@ -198,26 +189,20 @@ Both target the same RUMlog listener (`127.0.0.1:2233`).
 
 ![WSJT-X Reporting — UDP Server + Secondary UDP Server for ADIF](images/udp-pipeline/06-wsjtx-reporting.png)
 
-Same two-output pattern as JTDX:
+Same single-output pattern as JTDX:
 
 - **UDP Server** (feeds DXCA):
   - UDP Server: `127.0.0.1`
   - UDP Server port number: `2335`
   - Outgoing interfaces: `lo0` (loopback only — no packets on the LAN)
   - Multicast TTL: `1` (unused here; we're not multicasting)
-- **Secondary UDP Server (deprecated)** (feeds RUMlog directly):
-  - ✓ Enable logged contact ADIF broadcast
-  - Server name or IP address: `127.0.0.1`
-  - **Server port number: `2233`** ← this must match RUMlog's Flex/ADIF
-    listener, not any DXCA input port. Sending to 2333 (DXCA's MSHV input)
-    is a common misconfiguration — DXCA's `WSJTXMessageParser` will reject
-    the ADIF text as malformed WSJT-X binary and drop it silently, and
-    RUMlog will never see the logged QSO.
 
-WSJT-X labels this section *deprecated*; it still works and is the only
-built-in path for logged-contact ADIF-over-UDP that WSJT-X ships with, so it
-stays in use until the project offers a replacement. When they do, the
-replacement will still need to target `127.0.0.1:2233`.
+That is the whole WSJT-X configuration — logged QSOs go out on this server
+with everything else.
+
+- **Secondary UDP Server (deprecated)** — **not needed.** Leave *Enable
+  logged contact ADIF broadcast* unchecked. WSJT-X itself labels the section
+  deprecated, and this pipeline never needed it.
 
 ### 5. RUMlogNG
 
@@ -226,15 +211,18 @@ replacement will still need to target `127.0.0.1:2233`.
 ![RUMlogNG UDP preferences](images/udp-pipeline/04-rumlog-udp-prefs.png)
 
 - **WSJT-X** section (bottom-left):
-  - ✓ Save QSOs to logbook
+  - ✓ Save QSOs to logbook  ← **this is what logs your QSOs.** It acts on
+    the type-5 QSO-Logged messages arriving on the Data Port below, which
+    is why no separate ADIF feed is needed.
   - ✓ Callsign check
   - ✓ Populate dx-spot table
   - ✓ Colorize callsigns
-- **Data Port** (bottom-right): `2237`  ← receives DXCA's rebroadcast.
+- **Data Port** (bottom-right): `2237`  ← receives DXCA's rebroadcast:
+  decodes, Status, and logged QSOs alike.
 - **Multicast:** leave *empty* (we are using unicast forwarding through DXCA;
   no multicast group is involved).
-- **QSOs received from Flex / ADIF:** `Save QSO`, Port `2233`  ← receives
-  MSHV's Simplified UDP Broadcast for QSO logging.
+- **QSOs received from Flex / ADIF:** not used by this pipeline. Harmless to
+  leave configured; nothing sends to it.
 - **QSOs received from N1MM:** `Nil`, Port `2237` (the row is disabled by
   the Nil action — the port field being 2237 is cosmetic and does not open a
   second listener; the WSJT-X `Data Port` above is the one that binds).
@@ -242,45 +230,54 @@ replacement will still need to target `127.0.0.1:2233`.
 Also configure **DX Cluster** in RUMlogNG's separate DX Cluster tab to point
 at `127.0.0.1:7575` — that pulls cluster spots from DXCA's TCP cluster server.
 
-## Why two MSHV feeds?
+## Logged QSOs need no second feed
 
-MSHV's *main* UDP Broadcast (port 2333 in this setup) is a **WSJT-X-compatible
-binary** stream. Its three checkboxes select which WSJT-X message types are
-emitted on that single socket:
+*(Corrected 2026-08-28, from operating the shack. This section previously
+argued the opposite — that each decoder needed a secondary ADIF-over-UDP leg
+to `127.0.0.1:2233`. It doesn't, and the reason is worth writing down,
+because the old argument looked airtight.)*
 
-| Checkbox                | WSJT-X message | Emitted when                     |
-|-------------------------|----------------|----------------------------------|
-| Enable Decoded Text     | type-2 Decode  | Every FT8/FT4 decode             |
-| Enable Logged QSO       | type-5 QSO Log | You click *Log QSO* in MSHV      |
-| Enable Logged QSO ADIF  | type-12 ADIF   | You click *Log QSO* in MSHV      |
+**The claim:** the only setting any of the three decoders needs beyond its
+DXCA port is MSHV's **Enable Logged QSO**. No secondary / 2nd / Simplified
+UDP broadcast, anywhere.
 
-DXCA's UDP listener only forwards WSJT-X **type-1 (Status)** and **type-2
-(Decode)** — types 5 and 12 fall into `default: break` in
-[`WSJTXUDPListener.processMessage`](../DXClusterAggregator/Network/WSJTXUDPListener.swift)
-and are dropped on the floor. So enabling Logged-QSO on port 2333 would send
-datagrams that no downstream consumer ever sees — dead weight.
+**Why it works.** Passthrough forwards each inbound datagram **verbatim,
+before parsing** — that is the whole point of the format, and [The rule that
+makes this work](#the-rule-that-makes-this-work) says as much: *every* WSJT-X
+message type reaches RUMlog intact, QSO Logged included. A logged QSO is
+WSJT-X **type-5**, arriving on the same socket as the decodes; DXCA relays it
+to RUMlog's Data Port (2237), where **✓ Save QSOs to logbook** files it.
+In dxca 2.0 this is `UDPBroadcaster::send_raw`, called on the raw bytes
+before `wsjtx::parse` is ever reached; in 1.x it was the `onRawDatagram`
+wiring, which behaved the same way.
 
-MSHV's **Simplified UDP Broadcast** is a completely separate socket that
-sends **raw ADIF text** (no WSJT-X framing) on a different port. RUMlogNG has
-a dedicated listener for exactly this on its "QSOs received from Flex / ADIF"
-port. That is the working MSHV → RUMlog QSO-logging path.
+**Why the old argument was wrong.** It observed — correctly — that DXCA's
+*parser* drops types 5 and 12 (`default: break` in
+[`WSJTXUDPListener.processMessage`](../DXClusterAggregator/Network/WSJTXUDPListener.swift);
+`Message::Status`/`Message::Decode` only, in 2.0's `pipeline.rs`) and
+concluded no downstream consumer ever sees them. But the parse path is not
+the only path: passthrough had already copied the datagram out. The doc
+contradicted itself for months — the rule at the top said QSO Logged reaches
+RUMlog, this section said it couldn't — and the secondary feeds papered over
+the gap, so nothing ever looked broken.
 
-**Bottom line:** the "Simplified" feed is redundant for *spots* (which is
-what we discussed while wiring DXCA), but it's the **only** path for MSHV's
-*logged QSOs* to reach RUMlog. Keep it enabled.
+**Why only MSHV needs a tick.** MSHV's main broadcast gates each WSJT-X
+message type behind its own checkbox, and *Enable Logged QSO* ships **off**:
 
-JTDX and WSJT-X have the same pattern — a *primary* UDP for live
-decodes/status (WSJT-X binary → DXCA) and a *secondary* UDP for logged-QSO
-ADIF text → RUMlog. In JTDX that's *"Send logged QSO ADIF data → 2nd UDP
-server"*; in WSJT-X it's *"Secondary UDP Server (deprecated) → Enable logged
-contact ADIF broadcast"*. Both must target `127.0.0.1:2233`, matching MSHV's
-Simplified UDP Broadcast and RUMlog's Flex/ADIF listener. See §3 and §4 for
-screenshots.
+| Checkbox                | WSJT-X message | Needed? |
+|-------------------------|----------------|---------|
+| Enable Decoded Text     | type-2 Decode  | ✓ — the spots |
+| Enable Logged QSO       | type-5 QSO Log | ✓ — **the tick people miss** |
+| Enable Logged QSO ADIF  | type-12 ADIF   | ✗ — RUMlog reads the type-5 |
 
-That means all three decoders reach RUMlog's log the same way (raw ADIF on
-2233), and RUMlog's WSJT-X binary listener on 2237 stays reserved for DXCA's
-rebroadcast of *live spots* — no QSO-log traffic goes through DXCA at all,
-so DXCA's `default: break` on WSJT-X type-5 / type-12 is fine.
+JTDX and WSJT-X have no such gate: their primary UDP server emits logged
+QSOs along with decodes and status, unconditionally. Hence "tick one box in
+MSHV, and nothing else anywhere".
+
+> **Note on the screenshots below and above:** they were captured under the
+> old two-feed wiring, so MSHV's *Enable Logged QSO* shows unticked and the
+> secondary-UDP panels show populated. The text is authoritative; the images
+> are stale until re-shot.
 
 ## Reboot survival
 
@@ -288,7 +285,6 @@ Every port is bound by exactly one process:
 
 - 2333/2334/2335 — only DXCA listens (each decoder is a *sender*, not a listener).
 - 2237 — only RUMlogNG listens (DXCA is a sender to it).
-- 2233 — only RUMlogNG listens (MSHV is a sender to it).
 - 7575 — only DXCA listens.
 
 If any two of these apps race at boot, none of their `bind()` calls can
@@ -327,6 +323,14 @@ see it. Trust the app UIs over `lsof` in that case.
 Verify **Enable Decoded Text ✓** in MSHV's *main* UDP Broadcast (port 2333),
 not the Simplified one. Only the main feed carries decodes; Simplified is
 logged-QSO ADIF only.
+
+### "Spots flow fine, but MSHV QSOs never reach the log"
+
+Tick **Enable Logged QSO** in MSHV's *main* UDP Broadcast. It ships off, and
+without it MSHV simply never emits the type-5 message that carries the QSO —
+so passthrough has nothing to forward. This is the one MSHV-specific setting
+in the whole pipeline; JTDX and WSJT-X send logged QSOs unprompted. Confirm
+RUMlog has **✓ Save QSOs to logbook** on its Data Port (2237) side.
 
 ### "RUMlog's WSJT-X ingest is empty"
 

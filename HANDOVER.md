@@ -190,12 +190,14 @@ committed to the repo (see conventions below).
   panel. The rule: DXCA is the sole listener on every WSJT-X port; each
   decoder targets a distinct DXCA input port (2333 MSHV / 2334 JTDX / 2335
   WSJT-X); DXCA rebroadcasts every spot in WSJT-X wire format to
-  `127.0.0.1:2237` where RUMlog's WSJT-X Data Port picks it up. MSHV also
-  runs a **Simplified UDP Broadcast** to `127.0.0.1:2233` (raw ADIF) which
-  RUMlog consumes on its "QSOs received from Flex / ADIF" listener — the
-  *only* working MSHV → RUMlog logged-QSO path, because DXCA's
-  `WSJTXUDPListener.processMessage` drops WSJT-X type-5 / type-12 in its
-  `default: break`. This setup survives any reboot order (every port has
+  `127.0.0.1:2237` where RUMlog's WSJT-X Data Port picks it up. **Superseded
+  2026-08-28:** this entry went on to describe MSHV's *Simplified UDP
+  Broadcast* to `127.0.0.1:2233` as the only working MSHV → RUMlog
+  logged-QSO path. It isn't — passthrough carries type-5 to 2237 like
+  everything else, and the one setting actually required is MSHV's *Enable
+  Logged QSO*. See the Known-gotcha entry below and
+  [`docs/UDP-PIPELINE.md`](docs/UDP-PIPELINE.md). This setup survives any
+  reboot order (every port has
   exactly one binder). Add this to the checklist when a user reports
   "aggregator is hung after a reboot" — usually it's another app racing to
   grab a WSJT-X port at login. Read the doc before touching any port number.
@@ -402,15 +404,24 @@ committed to the repo (see conventions below).
   Fix: `showMainWindow` should re-create the window (via `NSApp.windows`
   scan → `openWindow(id:)` or an explicit `NSWindow` init) when none exists,
   not only reorder/deminiaturize.
-- **DXCA drops WSJT-X type-5 (QSO Logged) and type-12 (ADIF Log) datagrams.**
+- **DXCA's *parser* drops WSJT-X type-5 (QSO Logged) and type-12 (ADIF
+  Log) — but passthrough does not, and that is the part that matters.**
   `WSJTXUDPListener.processMessage` handles only `.status` and `.decode`;
-  everything else falls into `default: break`. Not currently a problem —
-  every decoder has its own ADIF-over-UDP path to RUMlog (MSHV *Simplified
-  UDP Broadcast*, JTDX *2nd UDP server*, WSJT-X *Secondary UDP Server*),
-  all targeting `127.0.0.1:2233`, bypassing DXCA entirely. Would only
-  become worth fixing if someone wants QSO logs to flow through DXCA
-  specifically (e.g. to fan them out to a second logger). See
-  [`docs/UDP-PIPELINE.md`](docs/UDP-PIPELINE.md) for the current wiring.
+  everything else falls into `default: break`. **Corrected 2026-08-28:**
+  this entry used to conclude that logged QSOs therefore had to reach
+  RUMlog by a separate ADIF-over-UDP leg on `127.0.0.1:2233` (MSHV
+  *Simplified UDP Broadcast*, JTDX *2nd UDP server*, WSJT-X *Secondary UDP
+  Server*). They don't. Passthrough relays each datagram **verbatim before
+  parsing**, so type-5 reaches RUMlog's Data Port (2237) and its *Save QSOs
+  to logbook* files it. In practice the only decoder-side setting needed is
+  MSHV's **Enable Logged QSO** (its main broadcast gates message types
+  individually and ships with that box off); JTDX and WSJT-X emit logged
+  QSOs on the primary UDP server unconditionally. Established by operating
+  the shack, not by reading the code — the code had said as much all along
+  and the doc argued both sides. Full write-up:
+  [`docs/UDP-PIPELINE.md`](docs/UDP-PIPELINE.md) § *Logged QSOs need no
+  second feed*. Fixing the parser would still only matter if QSO logs
+  needed to be *fanned out* to a second logger.
 - `SpotMessage.dxCallsign`'s `looksLikeCallsign` heuristic is defensive but not
   exhaustive — pathological FT8 messages could still slip a non-call into the
   callsign column. Revisit if a user reports it.
