@@ -2,7 +2,8 @@
 
 > **Maintenance mode** (since 2026-08-27): superseded by **DXCA 2.0** — a
 > Rust rewrite with a multi-user web GUI that runs the shack from a
-> Raspberry Pi (private repo `vu2cpl/dxca`, v2.0.0). This app remains the
+> Raspberry Pi ([vu2cpl/dxca](https://github.com/vu2cpl/dxca), v2.1.1 —
+> now also with a Windows build). This app remains the
 > tested macOS fallback: fixes land as needed, no new features planned.
 > Do not run it while a dxca instance holds the same UDP/telnet ports.
 
