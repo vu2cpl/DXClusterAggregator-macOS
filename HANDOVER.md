@@ -212,10 +212,18 @@ committed to the repo (see conventions below).
     `CLUBLOG_API_KEY=…`) → next `./notarize.sh` picks it up. Nothing to edit.
   - Per-operator secrets (callsign, email, app password, Telegram token) are
     deliberately never injected: those authenticate a person, not the app.
-  - Club Log also ask that a **403 disables further requests immediately**
-    (they firewall repeat offenders by IP). Neither this app nor dxca
-    currently treats 403 differently from any other non-200 — worth a look if
-    either ever grows a retry loop.
+  - **A ClubLog 403 latches, and the latch is a fingerprint.**
+    `Utils/ClubLogRejection.swift` stores a SHA-256 of the credentials that
+    were rejected — the API key, and separately the callsign/email/app
+    password — and `ClubLogClient.refresh` refuses to send a set that matches
+    before it reaches the network. ClubLog ask that a 403 stop further
+    requests immediately, because their reactive firewall blocks the source IP
+    for repeated bad-credential traffic; that would cut off ClubLog for the
+    whole shack, invisibly, since a firewalled host just stops getting
+    answers. A fingerprint rather than a flag means **there is no reset button
+    to find**: change the key or the password and it no longer matches, so the
+    next Refresh simply goes through. Any successful download clears it too,
+    for credentials that start working again on ClubLog's side.
 - **Menu-bar icon source** is `DXClusterAggregator/Resources/MenuBarIcon*.png`
   (regenerate via `generate_menubar_icon.py`); `AppIcon.icns` via
   `generate_icon.py`.
@@ -310,7 +318,22 @@ committed to the repo (see conventions below).
   reworded; PDF regenerated (which also fixed the App Password cell overflowing
   its column). Verified: the Swift de-obfuscation round-trips to the configured
   key, `cty.php` answers HTTP 200 + gzip for it, and the empty tracked form
-  compiles and yields an empty string. **Still 1.8.4 — no version bump, so the
+  compiles and yields an empty string.
+  **Same session — ClubLog 403 handling.** ClubLog ask that a rejected
+  credential stop being sent immediately; the app treated 403 as just another
+  non-200 and would happily send the same wrong key on every click of Refresh.
+  New `ClubLogError` (403 kept separate from every other failure) and
+  `ClubLogRejection` (a fingerprint latch, see *Repo conventions*), applied to
+  both the cty key and the log credentials independently — a wrong app
+  password says nothing about the API key. Status messages now name what to
+  change rather than repeating "HTTP 403". Behaviour-checked: an untried key
+  reads clean, a rejected one latches, a *different* key is unaffected, the
+  two scopes are independent, a success clears, and ("ab","c") does not
+  collide with ("a","bc"). **Note: this app has no automatic ClubLog refresh
+  at all** — `autoRefreshOnStart` and `refreshIntervalHours` are in
+  `ClubLogConfig` and wired to nothing, so the only caller is the Refresh
+  button. The latch therefore guards against a human clicking, not a timer.
+  **Still 1.8.4 — no version bump, so the
   published release zip does NOT have this.** Shipping it means the usual
   v1.8.5 bump (three places) + `./notarize.sh`.
 - **2026-08-26** (docs) — Drafted the **DXCA 2.0 port plan**:

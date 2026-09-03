@@ -80,11 +80,18 @@ class ClubLogClient: ObservableObject {
         //    this needs nothing from the user; a key typed into Settings
         //    overrides the built-in one.
         let apiKey = config.effectiveAPIKey
+        if ClubLogRejection.isRejected(.ctyAPIKey, credentials: [apiKey]) {
+            // Already 403'd. Sending it again is useless and is what gets a
+            // host firewalled, so stop here rather than at ClubLog.
+            statusMessage = "ClubLog rejected this API key - enter a different one under Advanced"
+            return
+        }
         if !apiKey.isEmpty {
             statusMessage = "Downloading country file..."
             do {
                 let ctyData = try await downloadCTY(apiKey: apiKey)
                 try ctyData.write(to: ctyPath)
+                ClubLogRejection.clear(.ctyAPIKey)
 
                 let parser = CTYParser()
                 if parser.parse(data: ctyData) {
@@ -92,6 +99,11 @@ class ClubLogClient: ObservableObject {
                 } else {
                     statusMessage = "CTY parse failed"
                 }
+            } catch let error as ClubLogError where error.isForbidden {
+                ClubLogRejection.record(.ctyAPIKey, credentials: [apiKey])
+                statusMessage = "ClubLog rejected the API key (403) - it will not be retried "
+                    + "until you change it under Advanced"
+                return
             } catch {
                 statusMessage = "CTY download failed: \(error.localizedDescription)"
                 return
@@ -106,6 +118,12 @@ class ClubLogClient: ObservableObject {
             return
         }
 
+        let logCredentials = [config.callsign, config.email, config.appPassword]
+        if ClubLogRejection.isRejected(.logCredentials, credentials: logCredentials) {
+            statusMessage = "ClubLog rejected these credentials - check the email and app password"
+            return
+        }
+
         statusMessage = "Downloading log..."
         do {
             let adifData = try await downloadADIF(
@@ -113,6 +131,7 @@ class ClubLogClient: ObservableObject {
                 email: config.email,
                 password: config.appPassword
             )
+            ClubLogRejection.clear(.logCredentials)
             try adifData.write(to: adifPath)
 
             statusMessage = "Parsing log..."
@@ -176,6 +195,10 @@ class ClubLogClient: ObservableObject {
             }
 
             statusMessage = "Loaded \(qsoCount) QSOs, \(dxccCount) DXCCs"
+        } catch let error as ClubLogError where error.isForbidden {
+            ClubLogRejection.record(.logCredentials, credentials: logCredentials)
+            statusMessage = "ClubLog rejected the email / app password (403) - it will not be "
+                + "retried until you change one of them"
         } catch {
             statusMessage = "Log download failed: \(error.localizedDescription)"
         }
@@ -193,9 +216,17 @@ class ClubLogClient: ObservableObject {
         req.timeoutInterval = 60
 
         let (data, response) = try await URLSession.shared.data(for: req)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            throw NSError(domain: "ClubLog", code: -2,
-                          userInfo: [NSLocalizedDescriptionKey: "CTY HTTP error"])
+        guard let http = response as? HTTPURLResponse else {
+            throw ClubLogError.other("CTY download: no HTTP response")
+        }
+        // 403 is not just another failure: it means ClubLog rejected the key,
+        // and they ask that a rejected credential stop being sent rather than
+        // be retried.
+        if http.statusCode == 403 {
+            throw ClubLogError.forbidden("ClubLog rejected the API key (HTTP 403)")
+        }
+        guard http.statusCode == 200 else {
+            throw ClubLogError.other("CTY download: HTTP \(http.statusCode)")
         }
 
         // Response is gzipped XML. Decompress if needed.
@@ -230,12 +261,14 @@ class ClubLogClient: ObservableObject {
 
         let (data, response) = try await URLSession.shared.data(for: req)
         guard let http = response as? HTTPURLResponse else {
-            throw NSError(domain: "ClubLog", code: -3,
-                          userInfo: [NSLocalizedDescriptionKey: "No HTTP response"])
+            throw ClubLogError.other("ADIF download: no HTTP response")
+        }
+        if http.statusCode == 403 {
+            throw ClubLogError.forbidden(
+                "ClubLog rejected the email / app password (HTTP 403)")
         }
         guard http.statusCode == 200 else {
-            throw NSError(domain: "ClubLog", code: http.statusCode,
-                          userInfo: [NSLocalizedDescriptionKey: "HTTP \(http.statusCode)"])
+            throw ClubLogError.other("ADIF download: HTTP \(http.statusCode)")
         }
         return data
     }
