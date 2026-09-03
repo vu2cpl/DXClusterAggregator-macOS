@@ -868,7 +868,8 @@ def build_content():
 
     elements.append(Paragraph("9.1  Required Credentials", styles['SectionTitle']))
     elements.append(Paragraph(
-        "You will need the following from your ClubLog account (free at https://clublog.org):",
+        "You will need the following from your ClubLog account (free at https://clublog.org). "
+        "Only the first three are yours to supply:",
         styles['Body']
     ))
 
@@ -876,8 +877,8 @@ def build_content():
         ['Field', 'What it is', 'Where to get it'],
         ['Callsign', 'Your amateur radio callsign', 'Your ClubLog account callsign'],
         ['Email', 'Email address registered with ClubLog', 'Your ClubLog account email'],
-        ['App Password', 'Token for API access (NOT your login password)', 'ClubLog > Settings > App Passwords'],
-        ['API Key', 'Developer key for country file download', 'https://clublog.org/requestapikey.php'],
+        ['App Password', 'API token - NOT your login password', 'ClubLog > Settings > App Passwords'],
+        ['API Key', 'Optional - the app has one built in', 'ClubLog section > Advanced'],
     ]
 
     cred_table = Table(cred_fields, colWidths=[80, 180, 200])
@@ -897,6 +898,17 @@ def build_content():
     elements.append(cred_table)
 
     elements.append(Paragraph(
+        "The <b>API Key</b> is the one field you can ignore, which is why it sits out of the way "
+        "under <b>Advanced</b> at the foot of the ClubLog section. It identifies the application "
+        "rather than the operator, and a released DXClusterAggregator ships with a working "
+        "developer key for the country-file download - so leave it blank and Refresh will just "
+        "work. Fill it in only if you would rather the download counted against a key of your "
+        "own, or if you built the app from source (those builds carry no key, and the Advanced "
+        "section opens by default to say so); clearing the field goes back to the built-in key.",
+        styles['Note']
+    ))
+
+    elements.append(Paragraph(
         "All credentials are stored locally on your Mac in UserDefaults. They are not transmitted "
         "anywhere except to ClubLog's own servers when you click Refresh.",
         styles['Note']
@@ -908,7 +920,9 @@ def build_content():
         styles['Body']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> Enter your <b>Callsign</b>, <b>Email</b>, <b>App Password</b>, and <b>API Key</b>",
+        "<bullet>&bull;</bullet> Enter your <b>Callsign</b>, <b>Email</b> and <b>App Password</b> - "
+        "that is everything a released build needs (the API Key lives under "
+        "<b>Advanced</b> and can stay empty)",
         styles['BulletItem']
     ))
     elements.append(Paragraph(

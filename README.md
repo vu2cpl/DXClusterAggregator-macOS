@@ -45,7 +45,7 @@ A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JT
 The app runs standalone — all these are optional depending on which features you use:
 
 - **WSJT-X** and/or **JTDX** — recent version with UDP broadcast enabled, pointing at the aggregator's listen port (default `2237`)
-- **ClubLog account** with an **App Password** (Settings → App Passwords) and a **Developer API Key** ([request here](https://clublog.org/requestapikey.php)) — only needed for the alert/highlight features
+- **ClubLog account** with an **App Password** (Settings → App Passwords) — only needed for the alert/highlight features. A **Developer API Key** is *not* required with a released build: it ships with one for the country-file download. The field for it lives under **ClubLog Integration → Advanced** and can be left blank; fill it in only if you'd rather the download used a key of your own ([request one here](https://clublog.org/requestapikey.php)) — or if you built the app yourself, in which case there is no built-in key (see [Build from source](#build-from-source-requirements)).
 - **Telegram bot** (via @BotFather) + your Chat ID — only if you want Telegram push alerts
 - **Logging software** that connects to a telnet DX cluster (Logger32, N1MM+, Log4OM, DXKeeper, etc.) — point it at `127.0.0.1:7575` (or whatever port you configure)
 
@@ -56,6 +56,13 @@ Only needed if you're compiling the app yourself; end users don't need these.
 - **Xcode Command Line Tools** — `xcode-select --install` (provides the Swift 5.9+ compiler)
 - **macOS 15 SDK** — usually already installed alongside Xcode CLT. If you're on macOS 26 (Tahoe), you must pin the build to SDK 15 (`SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk`); otherwise the binary will refuse to launch on macOS 15 or earlier.
 - **Python 3** with `Pillow` and `reportlab` — only required if you want to regenerate the app icon or PDF user manual (`generate_icon.py`, `generate_menubar_icon.py`, `generate_manual.py`).
+
+> **No built-in ClubLog API key in a source build.** The key that fetches the country file is injected by
+> `notarize.sh` when a release is built and is deliberately never committed — Club Log delete API keys they
+> find published in a Git repository. A build from source therefore has an empty one, and the app falls back
+> to whatever you put in **ClubLog Integration → Advanced → API Key** (that disclosure opens by default when
+> no key is built in) — the app's original behaviour, fully functional.
+> [Request a key](https://clublog.org/requestapikey.php) if you don't have one.
 
 ## Installation
 

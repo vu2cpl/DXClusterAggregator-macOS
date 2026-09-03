@@ -19,7 +19,10 @@
 #     VERSION  e.g. 1.7.5. Optional if the .app already exists (read from its
 #              Info.plist); required when building a fresh bundle.
 #
-# Overridable via env: DEV_ID, NOTARY_PROFILE, SDK, APP
+# Overridable via env: DEV_ID, NOTARY_PROFILE, SDK, APP,
+#   CLUBLOG_API_KEY   (40-hex key to embed; default: read from the
+#                      installed app's own preferences)
+#   EMBED_CLUBLOG_KEY (0 = build without the built-in ClubLog key)
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -47,6 +50,27 @@ if [ -z "$VER" ] && [ -f "$APP/Contents/Info.plist" ]; then
   VER="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 fi
 [ -n "$VER" ] || { echo "ERROR: no version. Pass it: ./notarize.sh 1.7.5"; exit 1; }
+
+# --- ClubLog API key injection ---------------------------------------------
+# The key ships in the binary (Club Log issues it per application, and cty.xml
+# is the same file for every user) but must never reach the repo: Club Log
+# delete keys they find published in a Git repository, and this repo is public.
+# So it is injected for the build and cleared again on the way out - including
+# on failure or Ctrl-C, which is what the trap is for. Set EMBED_CLUBLOG_KEY=0
+# to build a release without it (users then supply their own key in Settings).
+KEYGEN=./scripts/embed_clublog_key.py
+if [ "${EMBED_CLUBLOG_KEY:-1}" = "1" ]; then
+  trap '"$KEYGEN" --clear >/dev/null' EXIT
+  echo "==> Injecting the ClubLog API key (cleared again when this script exits)"
+  "$KEYGEN" ${CLUBLOG_API_KEY:+"$CLUBLOG_API_KEY"} || {
+    echo "ERROR: no ClubLog API key to embed. Set it in the app's Settings, or"
+    echo "       pass CLUBLOG_API_KEY=<40-hex>, or EMBED_CLUBLOG_KEY=0 to skip."
+    exit 1
+  }
+else
+  echo "==> EMBED_CLUBLOG_KEY=0 — building WITHOUT the built-in ClubLog key"
+  "$KEYGEN" --clear >/dev/null
+fi
 
 echo "==> Universal release build (SDK: $SDK)"
 SDKROOT="$SDK" swift build -c release --arch arm64 --arch x86_64

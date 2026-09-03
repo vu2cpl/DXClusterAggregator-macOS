@@ -76,11 +76,14 @@ class ClubLogClient: ObservableObject {
 
         statusMessage = "Refreshing..."
 
-        // 1. Download cty.xml (requires API key)
-        if !config.apiKey.isEmpty {
+        // 1. Download cty.xml. The app ships with a ClubLog developer key, so
+        //    this needs nothing from the user; a key typed into Settings
+        //    overrides the built-in one.
+        let apiKey = config.effectiveAPIKey
+        if !apiKey.isEmpty {
             statusMessage = "Downloading country file..."
             do {
-                let ctyData = try await downloadCTY(apiKey: config.apiKey)
+                let ctyData = try await downloadCTY(apiKey: apiKey)
                 try ctyData.write(to: ctyPath)
 
                 let parser = CTYParser()
@@ -94,7 +97,7 @@ class ClubLogClient: ObservableObject {
                 return
             }
         } else {
-            statusMessage = "Note: API key not set - skipping country file"
+            statusMessage = "Note: no API key available - skipping country file"
         }
 
         // 2. Download ADIF log (requires callsign + email + app password)

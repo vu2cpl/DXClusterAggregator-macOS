@@ -25,6 +25,15 @@ struct ClubLogConfig: Codable, Equatable {
     var lastRefresh: Date? = nil
     var qsoCount: Int = 0
 
+    /// The API key actually used for cty.xml downloads. The app ships with a
+    /// working ClubLog developer key (see `BuiltInCredentials`), so this field
+    /// is only for operators who would rather burn their own key's quota -
+    /// anything they type here wins, and clearing it falls back to built-in.
+    var effectiveAPIKey: String {
+        let own = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        return own.isEmpty ? BuiltInCredentials.clubLogAPIKey : own
+    }
+
     /// URL to the LoTW user-activity file (CSV of every callsign that has
     /// ever uploaded a QSO to ARRL Logbook of The World). Default is ARRL's
     /// own authoritative file. Local filesystem paths or file:// URLs are

@@ -98,6 +98,12 @@ struct ContentView: View {
     // keyed by BroadcastDestination.id so each row has its own message.
     @State private var bcastTestResults: [UUID: String] = [:]
 
+    /// Whether the ClubLog "Advanced" disclosure is open. Starts closed for a
+    /// released build, where the shipped API key makes the field pointless for
+    /// almost everyone — and open for a build from source, where there is no
+    /// shipped key and the field is the only way to get a country file.
+    @State private var showClubLogAdvanced = BuiltInCredentials.clubLogAPIKey.isEmpty
+
     var body: some View {
         VStack(spacing: 12) {
             headerSection
@@ -565,12 +571,6 @@ struct ContentView: View {
                         .frame(width: 180)
                         .disabled(clubLogClient.isRefreshing)
 
-                    Text("API Key:").frame(width: 60, alignment: .trailing)
-                    SecureField("Developer API key", text: $settings.clubLog.apiKey)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 180)
-                        .disabled(clubLogClient.isRefreshing)
-
                     Spacer()
                 }
 
@@ -666,8 +666,69 @@ struct ContentView: View {
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
+
+                Divider()
+
+                clubLogAdvanced
             }
             .padding(.vertical, 4)
+        }
+    }
+
+    /// The ClubLog developer API key, tucked away.
+    ///
+    /// A released build ships with a key (injected by `notarize.sh`), so for
+    /// virtually every user this field is a leftover that only invites pasting
+    /// the wrong secret into it — hence out of the main rows. It stays
+    /// reachable because three cases still need it: a build from source, which
+    /// has no shipped key; a shipped key that ClubLog ever revokes or
+    /// rate-limits, which would otherwise strand every user until a new
+    /// release; and operators who would simply rather spend their own quota.
+    private var clubLogAdvanced: some View {
+        let hasBuiltInKey = !BuiltInCredentials.clubLogAPIKey.isEmpty
+        let usingOwnKey = !settings.clubLog.apiKey.trimmingCharacters(
+            in: .whitespacesAndNewlines).isEmpty
+
+        return DisclosureGroup(isExpanded: $showClubLogAdvanced) {
+            HStack(spacing: 8) {
+                Text("API Key:").frame(width: 70, alignment: .trailing)
+                SecureField(hasBuiltInKey ? "Optional - built-in key used"
+                                          : "Required in this build",
+                            text: $settings.clubLog.apiKey)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 260)
+                    .disabled(clubLogClient.isRefreshing)
+
+                Spacer()
+            }
+            .padding(.top, 4)
+
+            HStack {
+                Text(hasBuiltInKey
+                     ? "This build ships with a ClubLog developer API key for the country-file "
+                       + "download, so you can leave this blank. Enter your own only if you'd "
+                       + "rather use it; clearing the field goes back to the built-in one."
+                     : "This build has no built-in ClubLog API key — source builds don't, the "
+                       + "key is injected at release time. The country file won't download "
+                       + "until you enter one (clublog.org/requestapikey.php).")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text("Advanced").font(.caption).bold()
+                if usingOwnKey {
+                    Text("own API key set")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                } else if !hasBuiltInKey {
+                    Text("API key needed")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                }
+            }
         }
     }
 
