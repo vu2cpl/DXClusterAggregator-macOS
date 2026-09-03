@@ -4,18 +4,16 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.4 (released + notarized 2026-08-27 — the final
-feature release) · **SHELVED / MAINTENANCE MODE** — superseded by DXCA
-2.0 (`vu2cpl/dxca`), in production on noderedpi4 since 2026-08-27. This
-app is the tested fallback: no planned work, fixes only if the fallback
-is ever needed. The v1.8.4 GitHub release carries the notarized
-universal zip; the release pipeline (`./notarize.sh`) remains fully
-scripted should a fix ever warrant a v1.8.5.
-
-> ⚠️ **`main` is one change ahead of the v1.8.4 release** — the embedded
-> ClubLog API key (2026-09-03, see *Recent history*). Users downloading
-> the v1.8.4 zip still have to supply their own key. Shipping it is a
-> version bump (three places) + `./notarize.sh` away.
+**Current version:** v1.8.5 (released + notarized 2026-09-03 — the ClubLog
+API key ships with the app, and a 403 is no longer retried)
+· **SHELVED / MAINTENANCE MODE** — superseded by DXCA 2.0 (`vu2cpl/dxca`),
+in production on noderedpi4 since 2026-08-27. This app is the tested
+fallback: no planned work, fixes only if the fallback is ever needed.
+v1.8.4 was called the final *feature* release and that still holds —
+v1.8.5 exists because a first-run wall (every user obtaining their own
+ClubLog developer key by hand) and a ClubLog API-policy breach (retrying
+a 403) were both worth fixing in the fallback. The release pipeline
+(`./notarize.sh`) remains fully scripted.
 
 **Last updated:** 2026-09-03
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
@@ -333,9 +331,8 @@ committed to the repo (see conventions below).
   at all** — `autoRefreshOnStart` and `refreshIntervalHours` are in
   `ClubLogConfig` and wired to nothing, so the only caller is the Refresh
   button. The latch therefore guards against a human clicking, not a timer.
-  **Still 1.8.4 — no version bump, so the
-  published release zip does NOT have this.** Shipping it means the usual
-  v1.8.5 bump (three places) + `./notarize.sh`.
+  **Released as v1.8.5** (notarized + stapled the same day),
+  which is the version that first carries both this and the 403 latch.
 - **2026-08-26** (docs) — Drafted the **DXCA 2.0 port plan**:
   [`docs/DXCA2-RUST-PLAN.md`](docs/DXCA2-RUST-PLAN.md). Design-only, nothing
   implemented. DXCA 2.0 is a standalone Rust + Svelte-web-GUI successor
