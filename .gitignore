@@ -18,3 +18,7 @@ DXClusterAggregator-*.zip
 
 # Original Windows reference binary — kept locally, not part of the macOS app.
 FT8ClusterAggregator.exe
+
+# dated data dumps written next to the project (FCC states, IOTA groups) — regenerated, not source
+dxca-*-20*.txt
+dxca-*-20*.json
