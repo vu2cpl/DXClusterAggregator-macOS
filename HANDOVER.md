@@ -4,18 +4,21 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.5 (released + notarized 2026-09-03 — the ClubLog
-API key ships with the app, and a 403 is no longer retried)
+**Current version:** v1.8.6 (released + notarized 2026-10-09 — the in-app
+update check against GitHub releases). Installed at
+`/Applications/DXClusterAggregator.app` (not running — it stays closed while a
+dxca instance holds the same ports).
 · **SHELVED / MAINTENANCE MODE** — superseded by DXCA 2.0 (`vu2cpl/dxca`),
 in production on noderedpi4 since 2026-08-27. This app is the tested
 fallback: no planned work, fixes only if the fallback is ever needed.
 v1.8.4 was called the final *feature* release and that still holds —
 v1.8.5 exists because a first-run wall (every user obtaining their own
 ClubLog developer key by hand) and a ClubLog API-policy breach (retrying
-a 403) were both worth fixing in the fallback. The release pipeline
-(`./notarize.sh`) remains fully scripted.
+a 403) were both worth fixing in the fallback. v1.8.6 adds the update
+check shared by all five VU2CPL Swift apps. The release pipeline
+(`./notarize.sh`) remains fully scripted, fixed for Swift 6.4 on 2026-10-09.
 
-**Last updated:** 2026-10-09 (update-check follow-up on `main`, unreleased)
+**Last updated:** 2026-10-09 (v1.8.6 released; `notarize.sh` fixed for Swift 6.4)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -108,23 +111,25 @@ Source of truth is `DXClusterAggregator/` (SwiftPM executable target,
 
 ## Build & release process
 
-This machine is **macOS 26 (Tahoe)**; the default Swift SDK targets
-macOS 26. **You must pin to the macOS 15 SDK** or the binary will refuse to
-launch on macOS 15 (Sequoia) and earlier — this has bitten before.
+This machine is **macOS 27** with Xcode's Swift 6.4 and the macOS 27 SDK
+(the Command Line Tools also hold 26.5; there is no macOS 15 SDK any more).
+The deployment target — `.macOS(.v14)` in `Package.swift`, `minos 14.0` in
+the binary — is what lets a release load on Sonoma and later; the old SDK-15
+pin is gone (see the 2026-10-09 entry under *Recent history*).
 
-### 1. Universal release build (SDK-15 pinned)
+### 1. Universal release build
 
 ```bash
-SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk \
-  swift build -c release --arch arm64 --arch x86_64
-# universal binary lands in .build/apple/Products/Release/ (NOT .build/release/)
-# (15.4 is canonical; MacOSX15.sdk also works — any macOS 15 SDK, NOT 26.)
+swift build -c release --arch arm64 --arch x86_64
+BIN=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)
+# Swift 6.4 (swiftbuild): .build/out/Products/Release/
+# older toolchains (native): .build/apple/Products/Release/ — ask, don't assume
 ```
 
 ### 2. Assemble the `.app` bundle
 
 Follow README → "Option 2 → Step 2". Copy
-`.build/apple/Products/Release/DXClusterAggregator` into
+`$BIN/DXClusterAggregator` into
 `DXClusterAggregator.app/Contents/MacOS/`, copy `AppIcon.icns` and the
 `DXClusterAggregator_DXClusterAggregator.bundle` resource bundle, and write
 `Info.plist` with **`CFBundleShortVersionString` = the new version**.
@@ -146,17 +151,23 @@ The whole release pipeline is scripted. From a clean checkout:
 ./notarize.sh 1.7.5     # version arg; omit if the .app already carries it
 ```
 
-`notarize.sh` builds the universal binary (SDK-15 pinned), assembles the
-`.app` (writing `Info.plist` with the given version), Developer-ID signs it
-with hardened runtime + `DXClusterAggregator.entitlements`, submits to Apple's
-notary service, staples the ticket, verifies, and emits
-`DXClusterAggregator-<version>-notarized-universal.zip`.
+`notarize.sh` deletes the old build product and the old `.app`, builds the
+universal binary, asks SwiftPM where it went (`--show-bin-path`), and stops
+unless it exists, has both arm64 and x86_64, records `minos 14.0` and the
+SDK actually used, and needs no `@rpath` dylib. It then assembles the `.app`
+from scratch (`Info.plist` with the version, which defaults to and must match
+the `ContentView` footer), checks the copied binary is byte-identical to the
+build, Developer-ID signs it with hardened runtime +
+`DXClusterAggregator.entitlements`, submits to Apple's notary service,
+staples, verifies (`codesign --strict`, `spctl`, both fatal), and emits
+`DXClusterAggregator-<version>-notarized-universal.zip` made with
+`ditto --norsrc` (0 AppleDouble entries, checked) and prints its SHA-256.
 
 Prereq: the `notarytool` credentials must be stored once as keychain profile
 **`DXC-NOTARY`** (`xcrun notarytool store-credentials DXC-NOTARY …`). Manoj's
 Developer ID is `Developer ID Application: Manoj Ramawarrier (CHVNJ85C9F)`.
 With the profile stored the run is non-interactive. (The script's defaults are
-overridable via the `DEV_ID` / `NOTARY_PROFILE` / `SDK` env vars.)
+overridable via the `DEV_ID` / `NOTARY_PROFILE` / `DEVELOPER_DIR` env vars.)
 
 ### 4. Distribute
 
@@ -269,10 +280,21 @@ committed to the repo (see conventions below).
 
 ## Known gotchas
 
-- **SDK-26 launch failure (Tahoe).** Building with the system-default SDK 26
-  produces a binary that won't launch on macOS 15/earlier. Always pin
-  `SDKROOT=.../MacOSX15.sdk` for release builds. (Both `MacOSX15.sdk` and
-  `MacOSX15.4.sdk` are installed under `/Library/Developer/CommandLineTools/SDKs/`.)
+- **SDK and older macOS.** The April 2026 note said an SDK-26 build would not
+  launch on macOS 15, and release builds pinned `SDKROOT` to a macOS 15 SDK.
+  That pin never took effect through `notarize.sh`: v1.7.5 to v1.8.5 all
+  record `sdk 26.5`, `minos 14.0` in `LC_BUILD_VERSION` (checked 2026-10-09
+  with `vtool -show-build`). What matters for older systems is `minos` and
+  not linking an `@rpath` back-deployment dylib (e.g.
+  `libswiftCompatibilitySpan.dylib`), which a hand-assembled bundle would not
+  carry; `notarize.sh` checks both. Not tested on a real macOS 14/15 machine.
+- **Swift 6.4 records the wrong SDK unless told.** swiftbuild links through
+  `swiftc -sdk`, which gives clang only `--sysroot`, so `ld` writes the
+  deployment target as the SDK version (`sdk 14.0`) and macOS then applies
+  pre-26 linked-on-or-after behaviour. `SDKROOT` and `--sdk` are both ignored;
+  `notarize.sh` passes `-Xswiftc -Xclang-linker -Xswiftc -isysroot …` and
+  checks the recorded SDK. A plain `swift build` (README steps, debug runs)
+  still records `sdk 14.0` — harmless for local use.
 - **Telnet IAC noise.** Some AR-Cluster forks (e.g. N2WQ-2) prefix their banner
   with Telnet IAC option-negotiation bytes and use hanging (newline-less)
   prompts. `DXClusterClient.stripTelnetIAC` + the hanging-prompt path handle
@@ -290,7 +312,31 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
-- **2026-10-09** (unreleased — ships with the next release) — **Update check:
+- **2026-10-09 — v1.8.6 released** (notarized + stapled, universal), the
+  first release with the update check (both entries below).
+  https://github.com/vu2cpl/DXClusterAggregator-macOS/releases/tag/v1.8.6 —
+  asset `DXClusterAggregator-1.8.6-notarized-universal.zip`, SHA-256
+  `7c1a2b10d51c9b5f785dee11ba64c236a246ba792487bc996dc03663a7dfa5dc`;
+  downloaded back, unpacked with `ditto -x -k`, `codesign --strict`, `spctl`
+  (Notarized Developer ID) and `stapler validate` pass, `x86_64 arm64`,
+  version 1.8.6, binary identical to the build. Installed to
+  `/Applications/DXClusterAggregator.app` (there was no copy there before;
+  not launched — it was not running).
+  **`notarize.sh` fixed first** — it no longer ran on this Mac: it demanded a
+  macOS 15 SDK (only 26.5/27.0 installed) and copied from
+  `.build/apple/Products/Release`, where Swift 6.4 no longer writes. It now
+  uses the active Xcode's SDK, asks `swift build --show-bin-path`, deletes the
+  old product and `.app` first, and fails loudly on a missing product, a
+  missing architecture, the wrong `minos`/recorded SDK, an `@rpath` dylib, a
+  copy that differs from the build, `codesign`/`spctl` failure, or AppleDouble
+  entries in the zip (`ditto --norsrc`; v1.8.5's zip carried 23). The version
+  now comes from (and must match) the `ContentView` footer. Also found:
+  Swift 6.4 records `sdk 14.0` unless the linker is given `-isysroot` (see
+  *Known gotchas*); this release records `sdk 27.0`, `minos 14.0`, where
+  v1.8.5 recorded `sdk 26.5`. README build-from-source steps updated to the
+  `--show-bin-path` form and the SDK-15 instruction dropped.
+
+- **2026-10-09** (released in v1.8.6) — **Update check:
   Manoj's three follow-up decisions.** Changed once in the shared
   `UpdateChecker.swift` and copied whole to all five repos (still
   byte-identical). **(1) Only a successful check stores the time** — success
@@ -318,7 +364,7 @@ committed to the repo (see conventions below).
   exactly one, and two live requests passed. README *Updates* and manual
   § 3.4 updated, PDF regenerated.
 
-- **2026-10-08** (unreleased — ships with the next release) — **In-app update
+- **2026-10-08** (released in v1.8.6) — **In-app update
   check against GitHub releases.** Manoj's call for all five of his Swift apps:
   tell the user when a newer release is out, with no Sparkle, no appcast and no
   server of our own. New `DXClusterAggregator/UpdateChecker.swift` — one
@@ -520,19 +566,12 @@ committed to the repo (see conventions below).
 
 ## Open items
 
-- **Before the next release (the one that ships the update check), check
-  `notarize.sh` against today's toolchain** — two of its assumptions no longer
-  hold on this Mac (seen 2026-10-08, not changed here): **(1)** there is no
-  macOS 15 SDK any more (`/Library/Developer/CommandLineTools/SDKs/` holds only
-  26.5 and 27.0), so the SDK-15 pin stops the script with "no macOS 15 SDK
-  found"; **(2)** Swift 6.4's SwiftPM writes the universal product to
-  `.build/out/Products/Release/`, not `.build/apple/Products/Release/` (a
-  universal build with `--scratch-path` put it at `<path>/out/Products/Release/`),
-  so `REL=` points at nothing — or, if an old `.build/apple/` survives, at a
-  stale binary from an earlier release. The binary from
-  `swift build -c release --arch arm64 --arch x86_64` today still records
-  `minos 14.0`; whether a newer-SDK build really launches on macOS 15 and
-  earlier is what the pin was protecting, and is Manoj's call.
+- ~~**Before the next release, check `notarize.sh` against today's
+  toolchain**~~ — **done 2026-10-09** with v1.8.6: no SDK-15 pin, product path
+  from `--show-bin-path`, fresh build enforced and verified (see *Recent
+  history*). Still Manoj's call if he wants it: a launch test on a real
+  macOS 14/15 machine, which nobody has done since the SDK question was
+  raised in April.
 - **DXCA 2.0 (Rust port) — M2 complete; ⚠️ dxca is running the shack in
   burn-in since 2026-08-27.** The successor repo:
   https://github.com/vu2cpl/dxca (local `~/projects/dxca`; the plan's
