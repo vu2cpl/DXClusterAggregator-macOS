@@ -55,7 +55,7 @@ The app runs standalone — all these are optional depending on which features y
 Only needed if you're compiling the app yourself; end users don't need these.
 
 - **Xcode Command Line Tools** — `xcode-select --install` (provides the Swift 5.9+ compiler)
-- **macOS 15 SDK** — usually already installed alongside Xcode CLT. If you're on macOS 26 (Tahoe), you must pin the build to SDK 15 (`SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk`); otherwise the binary will refuse to launch on macOS 15 or earlier.
+- **Any current macOS SDK** — the one that comes with Xcode or the Command Line Tools. The package's deployment target (macOS 14) is what lets the binary run on Sonoma and later; no older SDK is needed.
 - **Python 3** with `Pillow` and `reportlab` — only required if you want to regenerate the app icon or PDF user manual (`generate_icon.py`, `generate_menubar_icon.py`, `generate_manual.py`).
 
 > **No built-in ClubLog API key in a source build.** The key that fetches the country file is injected by
@@ -93,18 +93,20 @@ Requires Xcode Command Line Tools (`xcode-select --install`).
 git clone https://github.com/vu2cpl/DXClusterAggregator-macOS.git
 cd DXClusterAggregator-macOS
 # Universal build (runs on both Apple Silicon and Intel Macs)
-SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk \
-  swift build -c release --arch arm64 --arch x86_64
+swift build -c release --arch arm64 --arch x86_64
+# Where SwiftPM put it (the folder differs between Swift versions)
+BIN=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)
 ```
 
 > **Notes:**
 > - `--arch arm64 --arch x86_64` produces a universal binary that runs on both
 >   Intel Macs and Apple Silicon.
-> - On macOS 26 (Tahoe) you must pin the SDK to MacOSX15.sdk or earlier —
->   binaries built with the system-default SDK 26 will refuse to launch on
->   macOS 15 (Sequoia) and earlier.
-> - The universal binary is placed in `.build/apple/Products/Release/` (not
->   `.build/release/`). Use that path when copying into the `.app`.
+> - The universal binary goes to `$BIN` — `.build/out/Products/Release/` with
+>   Swift 6.4, `.build/apple/Products/Release/` with older toolchains. Copy from
+>   `$BIN`, not from a path you remember: an old build left in the other folder
+>   would be copied without complaint.
+> - Releases are built by `./notarize.sh`, which does all of this, checks the
+>   result (both architectures, minimum macOS 14, no stale binary) and notarises.
 
 #### Step 2: Create the .app Bundle
 
@@ -114,13 +116,13 @@ mkdir -p DXClusterAggregator.app/Contents/MacOS
 mkdir -p DXClusterAggregator.app/Contents/Resources
 
 # Copy the built binary (universal)
-cp .build/apple/Products/Release/DXClusterAggregator DXClusterAggregator.app/Contents/MacOS/
+cp "$BIN/DXClusterAggregator" DXClusterAggregator.app/Contents/MacOS/
 
 # Copy the app icon
 cp AppIcon.icns DXClusterAggregator.app/Contents/Resources/
 
 # Copy the SwiftPM resource bundle (contains menu bar icon)
-cp -R .build/apple/Products/Release/DXClusterAggregator_DXClusterAggregator.bundle \
+cp -R "$BIN/DXClusterAggregator_DXClusterAggregator.bundle" \
       DXClusterAggregator.app/Contents/Resources/
 
 # Create minimal Info.plist for the resource bundle so codesign accepts it
@@ -155,9 +157,9 @@ cat > DXClusterAggregator.app/Contents/Info.plist << 'EOF'
     <key>CFBundleIdentifier</key>
     <string>com.vu2cpl.dxclusteraggregator</string>
     <key>CFBundleVersion</key>
-    <string>1.8.5</string>
+    <string>1.8.6</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.8.5</string>
+    <string>1.8.6</string>
     <key>CFBundleExecutable</key>
     <string>DXClusterAggregator</string>
     <key>CFBundlePackageType</key>
@@ -226,7 +228,7 @@ cp -r DXClusterAggregator.app /Applications/
 
 ## Updates
 
-About 10 seconds after launch, and then once a day for as long as it keeps running, the app asks GitHub whether a newer release exists. If one does, it shows the new version and its release notes: **Download** opens the release page in your browser (nothing is downloaded or installed automatically), **Skip This Version** keeps the automatic check quiet about that release, **Remind Me Later** asks again at the next daily check. Only a successful check counts towards the day: one that fails (offline, timeout, rate limit, any other error) stays silent and is tried again about an hour later, or at the next launch. Development builds (a version containing "dev") never check on their own. Untick **Check for updates automatically** in the settings panel to turn it off; **Check for Updates…** in the app menu (under About) checks right away. The only request is an anonymous `GET https://api.github.com/repos/vu2cpl/DXClusterAggregator-macOS/releases/latest` — no account or token, and nothing is sent beyond the app's name and version in the User-Agent. (In releases after v1.8.5.)
+About 10 seconds after launch, and then once a day for as long as it keeps running, the app asks GitHub whether a newer release exists. If one does, it shows the new version and its release notes: **Download** opens the release page in your browser (nothing is downloaded or installed automatically), **Skip This Version** keeps the automatic check quiet about that release, **Remind Me Later** asks again at the next daily check. Only a successful check counts towards the day: one that fails (offline, timeout, rate limit, any other error) stays silent and is tried again about an hour later, or at the next launch. Development builds (a version containing "dev") never check on their own. Untick **Check for updates automatically** in the settings panel to turn it off; **Check for Updates…** in the app menu (under About) checks right away. The only request is an anonymous `GET https://api.github.com/repos/vu2cpl/DXClusterAggregator-macOS/releases/latest` — no account or token, and nothing is sent beyond the app's name and version in the User-Agent. (Since v1.8.6.)
 
 ## Documentation
 
