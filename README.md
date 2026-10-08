@@ -27,6 +27,7 @@ A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JT
 - **Auto-clear with disk log** — prune old spots (0-120 min); pruned spots are appended to `DXC Spots.txt`, size-capped (default 100 MB, configurable, 0 = unlimited) with the oldest entries trimmed away automatically
 - **Universal binary** — native on both Apple Silicon and Intel Macs
 - **Persistent settings** — all configuration saved automatically (backward-compatible Codable)
+- **Update check** — tells you when a newer release is on GitHub (about 10 s after launch, at most once a day; **Check for Updates…** in the app menu; can be switched off — see [Updates](#updates))
 
 ## Requirements
 
@@ -219,8 +220,13 @@ cp -r DXClusterAggregator.app /Applications/
 | TCP Cluster Port | 7575 |
 | Broadcast 1 | 127.0.0.1:2236 |
 | Spot Log Cap | 100 MB (0 = unlimited) |
+| Check for updates automatically | On |
 
 > **Why 7575?** CW Skimmer Server (SkimSrv) on Windows defaults to ports 7300 and 7550, so the aggregator's telnet server defaults to **7575** to avoid clashing when both run on the same network.
+
+## Updates
+
+About 10 seconds after launch, at most once a day, the app asks GitHub whether a newer release exists. If one does, it shows the new version and its release notes: **Download** opens the release page in your browser (nothing is downloaded or installed automatically), **Skip This Version** keeps the automatic check quiet about that release, **Remind Me Later** asks again on a later launch. Untick **Check for updates automatically** in the settings panel to turn it off; **Check for Updates…** in the app menu (under About) checks right away. The only request is an anonymous `GET https://api.github.com/repos/vu2cpl/DXClusterAggregator-macOS/releases/latest` — no account or token, and nothing is sent beyond the app's name and version in the User-Agent. (In releases after v1.8.5.)
 
 ## Documentation
 

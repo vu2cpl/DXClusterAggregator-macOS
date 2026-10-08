@@ -15,7 +15,7 @@ ClubLog developer key by hand) and a ClubLog API-policy breach (retrying
 a 403) were both worth fixing in the fallback. The release pipeline
 (`./notarize.sh`) remains fully scripted.
 
-**Last updated:** 2026-09-03
+**Last updated:** 2026-10-08 (update check added on `main`, unreleased)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -75,6 +75,9 @@ Source of truth is `DXClusterAggregator/` (SwiftPM executable target,
 
 - **`DXClusterAggregatorApp.swift`** — `@main` entry, menu-bar item, window
   lifecycle.
+- **`UpdateChecker.swift`** — the GitHub-releases update check. Identical in
+  all five VU2CPL Swift apps; never edit it here alone — fix it, then copy the
+  whole file to the other four repos.
 - **`ContentView.swift`** — the main view *and* the runtime orchestrator. Holds
   the `spots` array, display filters, start/stop of all clients, spot
   classification, rebroadcast + notification dedupe caches, and the
@@ -287,6 +290,35 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
+- **2026-10-08** (unreleased — ships with the next release) — **In-app update
+  check against GitHub releases.** Manoj's call for all five of his Swift apps:
+  tell the user when a newer release is out, with no Sparkle, no appcast and no
+  server of our own. New `DXClusterAggregator/UpdateChecker.swift` — one
+  self-contained file, **byte-identical** across timesync-mac,
+  DXClusterAggregator-macOS, kst2mac, macexpert-spe and AmateurRadioSuite (fix
+  it in one, copy the whole file to the others); the per-app part is the
+  `UpdateChecker.Configuration.app` extension in `DXClusterAggregatorApp.swift`.
+  About 10 s after launch (`AppDelegate.applicationDidFinishLaunching`), at most
+  once per 24 h, it sends one anonymous `GET
+  api.github.com/repos/vu2cpl/DXClusterAggregator-macOS/releases/latest` (10 s
+  timeout, no token) and compares `tag_name` with `CFBundleShortVersionString`
+  as integer tuples. Newer → dialog with the release notes, **Download** (opens
+  the release page; nothing is downloaded or installed) / **Skip This Version**
+  / **Remind Me Later**. Automatic checks are silent on any failure and for a
+  skipped tag. **Check for Updates…** sits in the app menu after About and
+  always reports; the **Check for updates automatically** toggle (default on)
+  is its own row in the settings panel under Callsign. UserDefaults keys
+  `UpdateCheck.automatic` / `.lastCheck` / `.skippedTag`. Test hook, inert
+  unless set: quit, `open --env UPDATE_CHECK_TEST_CURRENT_VERSION=0.0.1
+  DXClusterAggregator.app`, then Check for Updates… shows the dialog against
+  the real v1.8.5. Verified without launching the app (the dxca burn-in owns
+  its ports): the checker read v1.8.5 from the live API, the version
+  comparison and 24 h gate passed their cases, and the dialog was rendered
+  off-screen. README (feature bullet, defaults table, *Updates* section) and
+  manual § 3.4 added; PDF regenerated. An unbundled `swift run` build has no
+  version number, so its manual check says so and its automatic one stays
+  quiet.
+
 - **2026-09-03** (unreleased, on `main`) — **The ClubLog developer API key now
   ships with the app, injected at build time.** Every new user used to hit a
   first-run hard stop: alerts need `cty.xml`, `cdn.clublog.org/cty.php` needs
@@ -460,6 +492,17 @@ committed to the repo (see conventions below).
 
 ## Open items
 
+- **Before the next release (the one that ships the update check), check
+  `notarize.sh` against today's toolchain** — two of its assumptions no longer
+  hold on this Mac (seen 2026-10-08, not changed here): **(1)** there is no
+  macOS 15 SDK any more (`/Library/Developer/CommandLineTools/SDKs/` holds only
+  26.5 and 27.0), so the SDK-15 pin stops the script with "no macOS 15 SDK
+  found"; **(2)** Swift 6.4's SwiftPM writes the universal product to
+  `.build/out/Products/Release/`, not `.build/apple/Products/Release/` (the repo's
+  `.build/` has no `apple/` now), so `REL=` points at nothing. The binary from
+  `swift build -c release --arch arm64 --arch x86_64` today still records
+  `minos 14.0`; whether a newer-SDK build really launches on macOS 15 and
+  earlier is what the pin was protecting, and is Manoj's call.
 - **DXCA 2.0 (Rust port) — M2 complete; ⚠️ dxca is running the shack in
   burn-in since 2026-08-27.** The successor repo:
   https://github.com/vu2cpl/dxca (local `~/projects/dxca`; the plan's

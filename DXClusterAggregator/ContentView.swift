@@ -228,6 +228,13 @@ struct ContentView: View {
                 .help("Size cap for the on-disk spot log (DXC Spots.txt in Application Support). When the file grows past this, the oldest entries are trimmed away. Set to 0 for unlimited.")
             }
 
+            // Own row: the one above is already at the 800 pt minimum width.
+            // Check for Updates… is in the app menu, after About.
+            HStack {
+                UpdateChecker.AutomaticToggle()
+                Spacer()
+            }
+
             broadcastDestinationsSection
         }
     }

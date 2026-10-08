@@ -31,6 +31,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.attachToMainWindow()
         }
+        // About 10 s from now: ask GitHub whether a newer release exists
+        // (at most once a day; off via the settings panel).
+        UpdateChecker.shared.scheduleAutomaticCheck()
     }
 
     @discardableResult
@@ -93,6 +96,13 @@ enum WindowManager {
     }
 }
 
+/// The per-app part of UpdateChecker.swift (that file is identical in every
+/// VU2CPL app — see its header).
+extension UpdateChecker.Configuration {
+    static let app = UpdateChecker.Configuration(
+        repository: "vu2cpl/DXClusterAggregator-macOS", appName: "DX Cluster Aggregator")
+}
+
 @main
 struct DXClusterAggregatorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -104,6 +114,11 @@ struct DXClusterAggregatorApp: App {
                 .environmentObject(settings)
         }
         .defaultSize(width: 800, height: 800)
+        .commands {
+            CommandGroup(after: .appInfo) {
+                UpdateChecker.CheckButton()
+            }
+        }
 
         // Menu bar status item (always present) with custom template icon
         MenuBarExtra {

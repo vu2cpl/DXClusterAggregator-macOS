@@ -266,6 +266,7 @@ def build_toc():
         ("", "3.1  From Pre-built App Bundle"),
         ("", "3.2  Building from Source"),
         ("", "3.3  Creating the .app Bundle"),
+        ("", "3.4  Updates"),
         ("4.", "Getting Started"),
         ("", "4.1  Main Window Overview"),
         ("", "4.2  Setting Your Callsign"),
@@ -499,6 +500,39 @@ def build_content():
         styles['Note']
     ))
 
+    elements.append(Paragraph("3.4  Updates", styles['SectionTitle']))
+    elements.append(Paragraph(
+        "About 10 seconds after launch, at most once a day, the app asks GitHub whether a newer "
+        "release exists. If one does, it shows the new version and its release notes:",
+        styles['Body']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> <b>Download</b> opens the release page in your browser. Nothing is "
+        "downloaded or installed automatically",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> <b>Skip This Version</b> keeps the automatic check quiet about that release",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "<bullet>&bull;</bullet> <b>Remind Me Later</b> asks again on a later launch",
+        styles['BulletItem']
+    ))
+    elements.append(Paragraph(
+        "Untick <b>Check for updates automatically</b> in the settings panel to turn it off. "
+        "<b>Check for Updates...</b> in the app menu (under About) checks right away and always "
+        "reports: the update, \"You're up to date\", or why the check failed.",
+        styles['Body']
+    ))
+    elements.append(Paragraph(
+        "The only request is an anonymous GET of "
+        "api.github.com/repos/vu2cpl/DXClusterAggregator-macOS/releases/latest: no account or token, "
+        "and nothing is sent beyond the app's name and version. An automatic check that fails "
+        "(offline, GitHub busy) stays silent.",
+        styles['Note']
+    ))
+
     # Chapter 4: Getting Started
     elements.append(PageBreak())
     elements.append(Paragraph("4. Getting Started", styles['ChapterTitle']))
@@ -516,7 +550,7 @@ def build_content():
     layout_data = [
         ['Section', 'Purpose'],
         ['Header', 'App name and version number'],
-        ['Configuration', 'Callsign, TCP cluster port, and broadcast destinations'],
+        ['Configuration', 'Callsign, TCP cluster port, spot log cap, update check, broadcast destinations'],
         ['UDP Sources', 'List of WSJT-X/JTDX UDP sources with IP, port, and status'],
         ['DX Cluster Nodes', 'List of telnet DX cluster sources with address, credentials, and status'],
         ['Controls', 'CQ-Only filter, Minimize on Start, Clear Spots, Start/Stop Monitoring'],
