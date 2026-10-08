@@ -498,8 +498,10 @@ committed to the repo (see conventions below).
   macOS 15 SDK any more (`/Library/Developer/CommandLineTools/SDKs/` holds only
   26.5 and 27.0), so the SDK-15 pin stops the script with "no macOS 15 SDK
   found"; **(2)** Swift 6.4's SwiftPM writes the universal product to
-  `.build/out/Products/Release/`, not `.build/apple/Products/Release/` (the repo's
-  `.build/` has no `apple/` now), so `REL=` points at nothing. The binary from
+  `.build/out/Products/Release/`, not `.build/apple/Products/Release/` (a
+  universal build with `--scratch-path` put it at `<path>/out/Products/Release/`),
+  so `REL=` points at nothing — or, if an old `.build/apple/` survives, at a
+  stale binary from an earlier release. The binary from
   `swift build -c release --arch arm64 --arch x86_64` today still records
   `minos 14.0`; whether a newer-SDK build really launches on macOS 15 and
   earlier is what the pin was protecting, and is Manoj's call.
