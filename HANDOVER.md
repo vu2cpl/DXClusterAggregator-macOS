@@ -15,7 +15,7 @@ ClubLog developer key by hand) and a ClubLog API-policy breach (retrying
 a 403) were both worth fixing in the fallback. The release pipeline
 (`./notarize.sh`) remains fully scripted.
 
-**Last updated:** 2026-10-08 (update check added on `main`, unreleased)
+**Last updated:** 2026-10-09 (update-check follow-up on `main`, unreleased)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -289,6 +289,34 @@ committed to the repo (see conventions below).
 ---
 
 ## Recent history
+
+- **2026-10-09** (unreleased — ships with the next release) — **Update check:
+  Manoj's three follow-up decisions.** Changed once in the shared
+  `UpdateChecker.swift` and copied whole to all five repos (still
+  byte-identical). **(1) Only a successful check stores the time** — success
+  is HTTP 200 whose JSON has a `tag_name`, newer or not. Every failure
+  (offline, timeout, any HTTP error including the 403 rate limit, 404, bad
+  JSON) writes nothing, so the next launch tries again; the 10-08 version also
+  stored the time when GitHub answered with an error, so one rate-limited
+  launch silenced the check for a day. While the app runs, a failed automatic
+  attempt holds automatic attempts off for 1 h (in memory only); a failed
+  manual check touches neither. **(2) Re-check while running** — this app
+  runs for weeks, so after the launch check (still ~10 s after start) an
+  hourly timer (5 min tolerance, counted from the end of each attempt) runs
+  the automatic check when the setting is on, 24 h have passed since the last
+  success, the 1 h back-off is over and none of the checker's dialogs is open
+  — the pure `UpdateChecker.shouldCheckAutomatically(...)`. **(3) Development
+  builds never check on their own** — a version containing "dev" (any case)
+  makes no request at launch or from the timer; Check for Updates… still
+  works, and `UPDATE_CHECK_TEST_CURRENT_VERSION` replaces the version as
+  before and is not subject to the rule. Dialog, Skip / Remind Me Later,
+  toggle and menu item unchanged. Verified without launching the app: debug
+  and release builds clean, no warnings in the file; a scratch harness passed
+  148 cases (timer decision, success/failure storage per failure kind,
+  back-off, response parsing) with GitHub replaced by a stand-in, a fake
+  `0.0.0-dev` bundle made no request while a release-version one made
+  exactly one, and two live requests passed. README *Updates* and manual
+  § 3.4 updated, PDF regenerated.
 
 - **2026-10-08** (unreleased — ships with the next release) — **In-app update
   check against GitHub releases.** Manoj's call for all five of his Swift apps:

@@ -502,8 +502,9 @@ def build_content():
 
     elements.append(Paragraph("3.4  Updates", styles['SectionTitle']))
     elements.append(Paragraph(
-        "About 10 seconds after launch, at most once a day, the app asks GitHub whether a newer "
-        "release exists. If one does, it shows the new version and its release notes:",
+        "About 10 seconds after launch, and then once a day for as long as it keeps running, the app "
+        "asks GitHub whether a newer release exists. If one does, it shows the new version and its "
+        "release notes:",
         styles['Body']
     ))
     elements.append(Paragraph(
@@ -516,7 +517,7 @@ def build_content():
         styles['BulletItem']
     ))
     elements.append(Paragraph(
-        "<bullet>&bull;</bullet> <b>Remind Me Later</b> asks again on a later launch",
+        "<bullet>&bull;</bullet> <b>Remind Me Later</b> asks again at the next daily check",
         styles['BulletItem']
     ))
     elements.append(Paragraph(
@@ -529,7 +530,9 @@ def build_content():
         "The only request is an anonymous GET of "
         "api.github.com/repos/vu2cpl/DXClusterAggregator-macOS/releases/latest: no account or token, "
         "and nothing is sent beyond the app's name and version. An automatic check that fails "
-        "(offline, GitHub busy) stays silent.",
+        "(offline, GitHub busy) stays silent and does not count towards the day: it is tried again "
+        "about an hour later, or at the next launch. Development builds (a version containing "
+        "\"dev\") never check on their own.",
         styles['Note']
     ))
 
