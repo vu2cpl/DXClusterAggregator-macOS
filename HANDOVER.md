@@ -312,6 +312,27 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
+- **2026-10-09 (unreleased — ships with the next release) — update dialog:
+  no focus, no default button for the automatic check.** Manoj's rule, as
+  already applied to MSHV. The shared `UpdateChecker.swift` (still
+  byte-identical in all the Swift apps) used an app-modal `NSAlert` brought
+  forward with `NSApp.activate()`, so an automatic check's dialog became the
+  key window mid-typing and Return pressed Download. It is now a non-modal
+  panel: from an automatic check `orderFrontRegardless()` (in front, but the
+  app is not activated and the panel is not key); from Check for Updates…
+  activated and key. No default button either way (Return does nothing,
+  Download needs a click), Esc / close box = Remind Me Later, the notes hold
+  the keyboard when it is key, and the panel ends its responder chain for
+  `performClick:` (AppKit sends that on Space; past a panel it reached the
+  main window and "clicked" a text field there). Up-to-date / failure alerts
+  unchanged (manual only). Verified: `swift build` and `swift build -c
+  release` clean, no warnings in the file; a 41-check scratch harness in a
+  real AppKit run loop (another app keeps the keyboard; this app's text field
+  keeps typing and Return; Return/Space/Esc in the panel; a click on Download
+  opens the intercepted URL; manual panel key with no default button). No
+  new DXCA release for this (Manoj, 2026-10-09) — it rides along with the
+  next one.
+
 - **2026-10-09 — v1.8.6 released** (notarized + stapled, universal), the
   first release with the update check (both entries below).
   https://github.com/vu2cpl/DXClusterAggregator-macOS/releases/tag/v1.8.6 —
