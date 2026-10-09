@@ -314,6 +314,26 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
+- **2026-10-09 (afternoon) — v1.8.7 released** (notarized + stapled,
+  universal), carrying the two entries below. Manoj: *"release the mac app
+  too"*, after dxca v2.23.0 had gone out with the same cluster-line change.
+  https://github.com/vu2cpl/DXClusterAggregator-macOS/releases/tag/v1.8.7 —
+  asset `DXClusterAggregator-1.8.7-notarized-universal.zip` (2,106,046
+  bytes), SHA-256
+  `814741cca541ff1622efa3ef0610a53d2193b3c0c367f61c6f14bfcd16c80a65`.
+  Footer, `generate_manual.py` (PDF regenerated) and the README's
+  `Info.plist` example bumped first; release commit `0ac3ecb`, annotated tag
+  `v1.8.7`, both pushed. `./notarize.sh 1.8.7` ran clean end to end: SDK
+  27.0, `minos 14.0`, both slices, key injected and cleared (the tree was
+  checked clean before the commit), notary `Accepted`, stapled. The asset
+  was downloaded back: sha256 equal, `ditto -x -k`, `codesign --strict`,
+  `spctl` (Notarized Developer ID) and `stapler validate` pass, `x86_64
+  arm64`, version 1.8.7, binary identical to the build. Installed over the
+  1.8.6 copy at `/Applications/DXClusterAggregator.app` (not running before
+  or after — dxca holds the ports). Release notes: the cluster line, the
+  update dialog, the install paragraph, the VU3ESV credit. `releases/latest`
+  answers v1.8.7.
+
 - **2026-10-09 (released in v1.8.7) — relayed
   comments verbatim, decodes in RBN Aggregator's shape, at the dial.**
   Manoj asked whether the spots going to destinations carry the DF in the
