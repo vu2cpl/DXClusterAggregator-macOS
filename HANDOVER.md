@@ -4,8 +4,10 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.6 (released + notarized 2026-10-09 — the in-app
-update check against GitHub releases). Installed at
+**Current version:** v1.8.7 (released + notarized 2026-10-09 — the cluster
+line in RBN Aggregator's shape with relayed comments verbatim, and the update
+dialog that stays out of the way; v1.8.6, the same day, added the update
+check). Installed at
 `/Applications/DXClusterAggregator.app` (not running — it stays closed while a
 dxca instance holds the same ports).
 · **SHELVED / MAINTENANCE MODE** — superseded by DXCA 2.0 (`vu2cpl/dxca`),
@@ -18,7 +20,7 @@ a 403) were both worth fixing in the fallback. v1.8.6 adds the update
 check shared by all five VU2CPL Swift apps. The release pipeline
 (`./notarize.sh`) remains fully scripted, fixed for Swift 6.4 on 2026-10-09.
 
-**Last updated:** 2026-10-09 (the cluster line takes Aggregator's shape, unreleased; v1.8.6 released; `notarize.sh` fixed for Swift 6.4)
+**Last updated:** 2026-10-09 (v1.8.7 released: the cluster line in Aggregator's shape; v1.8.6 released earlier the same day; `notarize.sh` fixed for Swift 6.4)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -312,7 +314,7 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
-- **2026-10-09 (unreleased — ships with the next release) — relayed
+- **2026-10-09 (released in v1.8.7) — relayed
   comments verbatim, decodes in RBN Aggregator's shape, at the dial.**
   Manoj asked whether the spots going to destinations carry the DF in the
   comment. They did not: `ClusterFormatter` synthesised `FT8 -10 dB` for
@@ -342,10 +344,10 @@ committed to the repo (see conventions below).
   same night (`dxca-core/src/format.rs`; its HANDOVER, *Session 2026-10-09
   (night)*, has the Aggregator banner and the sample numbers). Verified:
   `swift build` clean apart from the pre-existing Combine warning in
-  ContentView. No release on its own — rides with the next one, like the
-  update-dialog change below.
+  ContentView. Shipped in v1.8.7 the same afternoon, with the update-dialog
+  change below.
 
-- **2026-10-09 (unreleased — ships with the next release) — update dialog:
+- **2026-10-09 (released in v1.8.7) — update dialog:
   no focus, no default button for the automatic check.** Manoj's rule, as
   already applied to MSHV. The shared `UpdateChecker.swift` (still
   byte-identical in all the Swift apps) used an app-modal `NSAlert` brought

@@ -18,7 +18,7 @@ A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JT
 - **LoTW User Marker** — Green dot after callsigns of known LoTW uploaders (downloaded from ARRL directly)
 - **Beacon Detection** — NCDXF/IBP + national beacon database; `/B` `/BCN` suffix handling; no false alerts
 - **Digital modes grouped as DATA** — FT8/FT4/RTTY/JT65/PSK/MSK144 etc. share one DXCC slot, matching award rules
-- **Built-in Telnet Cluster Server** — Feed aggregated spots to Logger32, N1MM+, Log4OM, DXKeeper, etc. A relayed cluster spot keeps its comment exactly as it arrived. A decoder's spot goes out the way RBN Aggregator spots FT8 — at the dial, with the comment `-7 dB   6 FT8  CQ MO13 1758` (SNR, the symbol rate in baud, mode, `CQ` and its grid, the DX station's audio offset in Hz last), so a logger made for Aggregator's lines reads it unchanged. The same line goes to DX-cluster-text UDP destinations.
+- **Built-in Telnet Cluster Server** — Feed aggregated spots to Logger32, N1MM+, Log4OM, DXKeeper, etc. A relayed cluster spot keeps its comment exactly as it arrived. A decoder's spot goes out the way RBN Aggregator spots FT8 — at the dial, with the comment `-7 dB   6 FT8  CQ MO13 1758` (SNR, the symbol rate in baud, mode, `CQ` and its grid, the DX station's audio offset in Hz last), so a logger made for Aggregator's lines reads it unchanged. The same line goes to DX-cluster-text UDP destinations. (Since v1.8.7.)
 - **UDP Broadcast destinations** — forward aggregated spots to one or more UDP destinations in either DX-cluster text or WSJT-X binary format; or use the **Passthrough** format to relay every raw incoming decoder datagram verbatim, keeping downstream loggers' click-to-fill callsign lookup (e.g. RUMlog) working when decoders are pointed at DXCA instead of the logger directly
 - **Telegram + macOS Notifications** — Per-callsign cooldown, selectable alert levels
 - **Sortable / resizable spots table** — click any column to sort, drag between headers to resize
@@ -157,9 +157,9 @@ cat > DXClusterAggregator.app/Contents/Info.plist << 'EOF'
     <key>CFBundleIdentifier</key>
     <string>com.vu2cpl.dxclusteraggregator</string>
     <key>CFBundleVersion</key>
-    <string>1.8.6</string>
+    <string>1.8.7</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.8.6</string>
+    <string>1.8.7</string>
     <key>CFBundleExecutable</key>
     <string>DXClusterAggregator</string>
     <key>CFBundlePackageType</key>
