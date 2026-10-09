@@ -18,7 +18,7 @@ A native macOS application that aggregates FT8/FT4 spots from multiple WSJT-X/JT
 - **LoTW User Marker** — Green dot after callsigns of known LoTW uploaders (downloaded from ARRL directly)
 - **Beacon Detection** — NCDXF/IBP + national beacon database; `/B` `/BCN` suffix handling; no false alerts
 - **Digital modes grouped as DATA** — FT8/FT4/RTTY/JT65/PSK/MSK144 etc. share one DXCC slot, matching award rules
-- **Built-in Telnet Cluster Server** — Feed aggregated spots to Logger32, N1MM+, Log4OM, DXKeeper, etc.
+- **Built-in Telnet Cluster Server** — Feed aggregated spots to Logger32, N1MM+, Log4OM, DXKeeper, etc. Each line's comment carries the mode, the SNR and, for a decoder's spot, the DX station's audio offset (`FT8 -10 dB DF 1487 Hz` — `DF` as MSHV names it, the number you click in the waterfall; the frequency column is dial + offset rounded to 0.1 kHz, so it can't tell you). The same line goes to DX-cluster-text UDP destinations.
 - **UDP Broadcast destinations** — forward aggregated spots to one or more UDP destinations in either DX-cluster text or WSJT-X binary format; or use the **Passthrough** format to relay every raw incoming decoder datagram verbatim, keeping downstream loggers' click-to-fill callsign lookup (e.g. RUMlog) working when decoders are pointed at DXCA instead of the logger directly
 - **Telegram + macOS Notifications** — Per-callsign cooldown, selectable alert levels
 - **Sortable / resizable spots table** — click any column to sort, drag between headers to resize

@@ -28,7 +28,18 @@ struct ClusterFormatter {
         // Field-by-field with double-space separators. This matches what
         // the user sees from W3LPL / VE7CC / GB7DXC etc. on real clusters.
         let freqStr  = String(format: "%.1f", freqKHz)
-        let comment  = "\(spot.mode) \(spot.snr) dB"
+        // The comment ends with the DX station's audio offset when the
+        // decoder reported one, labelled `DF` (MSHV's column name for it),
+        // the number you click in the waterfall to answer. The frequency
+        // cell can't carry it: dial + offset rounded to 0.1 kHz, so
+        // 14074 + 1487 Hz reads 14075.5. A cluster-sourced spot is built
+        // with deltaFrequency 0 (no decoder saw it), and no FT8/FT4 signal
+        // sits at 0 Hz audio, so 0 means unknown and is never printed —
+        // `DF 0 Hz` would point at the bottom of the passband. `<n> Hz` is
+        // the labelled form DXCA 2.x reads back out of a cluster comment.
+        let comment  = spot.deltaFrequency > 0
+            ? "\(spot.mode) \(spot.snr) dB DF \(spot.deltaFrequency) Hz"
+            : "\(spot.mode) \(spot.snr) dB"
         let timeStr  = spot.timeString    // HHmm
 
         // Pad fields to widths a typical Spider cluster uses, so columnar

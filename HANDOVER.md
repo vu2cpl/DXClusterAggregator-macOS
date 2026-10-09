@@ -18,7 +18,7 @@ a 403) were both worth fixing in the fallback. v1.8.6 adds the update
 check shared by all five VU2CPL Swift apps. The release pipeline
 (`./notarize.sh`) remains fully scripted, fixed for Swift 6.4 on 2026-10-09.
 
-**Last updated:** 2026-10-09 (v1.8.6 released; `notarize.sh` fixed for Swift 6.4)
+**Last updated:** 2026-10-09 (the cluster line carries `DF`, unreleased; v1.8.6 released; `notarize.sh` fixed for Swift 6.4)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -311,6 +311,29 @@ committed to the repo (see conventions below).
 ---
 
 ## Recent history
+
+- **2026-10-09 (unreleased — ships with the next release) — the cluster
+  line's comment carries the DX's audio offset.** Manoj asked whether the
+  spots going to destinations carry the DF in the comment. They did not
+  (`FT8 -10 dB`; the offset is folded into the frequency cell and rounded
+  away there), so: *"add the DF to the comment in both formatters"*.
+  `ClusterFormatter.format` now writes `FT8 -10 dB DF 1487 Hz` when
+  `spot.deltaFrequency > 0` and the old comment otherwise; that line feeds
+  the telnet server and every DX-cluster-text UDP destination. The
+  DX-cluster ingest builds its spots with `deltaFrequency: 0` and no
+  FT8/FT4 signal sits at 0 Hz audio, so 0 means unknown and never prints —
+  `DF 0 Hz` would point at the bottom of the passband. Untouched: the
+  WSJT-X-format UDP builder (dial = the exact frequency, Decode DF 0, as its
+  header says) and passthrough (the original datagram). `DF` is MSHV's name
+  for the column and the label dxca's alerts and history already use, and
+  `<n> Hz` is the form dxca reads back out of a cluster comment, so a dxca
+  fed by this app's telnet server recovers the offset. The comment cell is
+  28 wide; `FST4W -24 dB DF 2999 Hz` is 23, and the time still lands last.
+  dxca got the identical change in `dxca-core/src/format.rs` the same night
+  (its HANDOVER, *Session 2026-10-09 (night)*). Verified: `swift build`
+  clean apart from the pre-existing Combine warning in ContentView. No
+  release for this on its own — it rides with the next one, like the
+  update-dialog change below.
 
 - **2026-10-09 (unreleased — ships with the next release) — update dialog:
   no focus, no default button for the automatic check.** Manoj's rule, as
