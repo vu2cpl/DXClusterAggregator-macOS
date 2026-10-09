@@ -18,7 +18,7 @@ a 403) were both worth fixing in the fallback. v1.8.6 adds the update
 check shared by all five VU2CPL Swift apps. The release pipeline
 (`./notarize.sh`) remains fully scripted, fixed for Swift 6.4 on 2026-10-09.
 
-**Last updated:** 2026-10-09 (the cluster line carries `DF`, unreleased; v1.8.6 released; `notarize.sh` fixed for Swift 6.4)
+**Last updated:** 2026-10-09 (the cluster line takes Aggregator's shape, unreleased; v1.8.6 released; `notarize.sh` fixed for Swift 6.4)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -312,27 +312,37 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
-- **2026-10-09 (unreleased — ships with the next release) — the cluster
-  line's comment carries the DX's audio offset.** Manoj asked whether the
-  spots going to destinations carry the DF in the comment. They did not
-  (`FT8 -10 dB`; the offset is folded into the frequency cell and rounded
-  away there), so: *"add the DF to the comment in both formatters"*.
-  `ClusterFormatter.format` now writes `FT8 -10 dB DF 1487 Hz` when
-  `spot.deltaFrequency > 0` and the old comment otherwise; that line feeds
-  the telnet server and every DX-cluster-text UDP destination. The
-  DX-cluster ingest builds its spots with `deltaFrequency: 0` and no
-  FT8/FT4 signal sits at 0 Hz audio, so 0 means unknown and never prints —
-  `DF 0 Hz` would point at the bottom of the passband. Untouched: the
-  WSJT-X-format UDP builder (dial = the exact frequency, Decode DF 0, as its
-  header says) and passthrough (the original datagram). `DF` is MSHV's name
-  for the column and the label dxca's alerts and history already use, and
-  `<n> Hz` is the form dxca reads back out of a cluster comment, so a dxca
-  fed by this app's telnet server recovers the offset. The comment cell is
-  28 wide; `FST4W -24 dB DF 2999 Hz` is 23, and the time still lands last.
-  dxca got the identical change in `dxca-core/src/format.rs` the same night
-  (its HANDOVER, *Session 2026-10-09 (night)*). Verified: `swift build`
-  clean apart from the pre-existing Combine warning in ContentView. No
-  release for this on its own — it rides with the next one, like the
+- **2026-10-09 (unreleased — ships with the next release) — relayed
+  comments verbatim, decodes in RBN Aggregator's shape, at the dial.**
+  Manoj asked whether the spots going to destinations carry the DF in the
+  comment. They did not: `ClusterFormatter` synthesised `FT8 -10 dB` for
+  every spot, so a relayed skimmer spot's `-15 dB 1032 FT8` left as
+  `FT8 -15 dB` and the offset went with it. Three passes, none released: a
+  labelled `FT8 -10 dB DF 1487 Hz` (commit `ea52176`); then, shown the
+  inbound shapes, *"keep the original comment and no need for any DF or Hz
+  in comments. the logging softwares are made to take it that way"*; then
+  *"sequence it exactly like vu2oy format"*. VU2OY's node
+  (`vu2oy.ddns.net:7550`) turned out to be **RBN Aggregator** (its banner
+  says so), and its `6` is **FT8's symbol rate in baud** in the column a CW
+  spot uses for WPM. Now: `SpotMessage` gained `comment: String?` (nil for
+  decodes — the WSJT-X Decode message has no such field; `handleClusterSpot`
+  fills it from the `DX de` line) and `cqGrid` (a CQ's trailing locator,
+  `RR73` refused); `ClusterFormatter.format` sends a relayed comment
+  verbatim (even empty) and gives a decode Aggregator's comment column for
+  column — SNR `%3d`, ` dB`, rate `%4d` (FT8 `6`; FT4 `21`, 20.833 rounded,
+  unverified against a live line), mode, two spaces, `CQ`/`CQ <grid>` in 8,
+  offset `%4d`; 28 columns for a 3-letter mode, no rate token for modes
+  Aggregator never spots, no offset column when `deltaFrequency` is 0. **The
+  frequency cell is now the dial** (`dialFrequency`), as Aggregator spots
+  it, with the offset in the comment relative to it; a decode used to go
+  out at dial + offset (14075.8), which a logger reading the comment would
+  count twice — this is the one change a logger notices. Feeds the telnet
+  server and DX-cluster-text UDP destinations; the WSJT-X-format UDP
+  builder and passthrough are untouched. dxca got the identical change the
+  same night (`dxca-core/src/format.rs`; its HANDOVER, *Session 2026-10-09
+  (night)*, has the Aggregator banner and the sample numbers). Verified:
+  `swift build` clean apart from the pre-existing Combine warning in
+  ContentView. No release on its own — rides with the next one, like the
   update-dialog change below.
 
 - **2026-10-09 (unreleased — ships with the next release) — update dialog:

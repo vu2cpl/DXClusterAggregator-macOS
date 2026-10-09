@@ -19,6 +19,12 @@ struct SpotMessage: Identifiable {
     var bandName: String? = nil
     var isBeacon: Bool = false
     var isLoTWUser: Bool = false
+    /// The spotter's comment, verbatim, for a spot relayed from a DX-cluster
+    /// node (`handleClusterSpot` fills it from the `DX de` line). nil for a
+    /// decoder's spot — the WSJT-X Decode message has no such field.
+    /// `ClusterFormatter` sends it on untouched: that text is what logging
+    /// software is written to read.
+    var comment: String? = nil
 
     /// Prefix the message with "[BEACON] " if this spot is from a known beacon
     /// so the user sees it at a glance in the Message column.
@@ -67,6 +73,25 @@ struct SpotMessage: Identifiable {
 
     var isCQ: Bool {
         message.uppercased().hasPrefix("CQ ")
+    }
+
+    /// The grid a CQ announces — the message's last token when it is shaped
+    /// like a Maidenhead locator (two letters A–R, two digits, optionally two
+    /// more letters) and is not `RR73`, the sign-off that happens to parse as
+    /// one. nil for anything else. The cluster line prints it after `CQ`, as
+    /// RBN Aggregator does.
+    var cqGrid: String? {
+        guard isCQ else { return nil }
+        let parts = message.split(separator: " ").map(String.init)
+        guard parts.count >= 2, let last = parts.last else { return nil }
+        let up = last.uppercased()
+        guard up != "RR73", up.count == 4 || up.count == 6 else { return nil }
+        let c = Array(up)
+        let fieldLetter: (Character) -> Bool = { $0 >= "A" && $0 <= "R" }
+        let subsquareLetter: (Character) -> Bool = { $0 >= "A" && $0 <= "X" }
+        guard fieldLetter(c[0]), fieldLetter(c[1]), c[2].isNumber, c[3].isNumber else { return nil }
+        if up.count == 6, !(subsquareLetter(c[4]) && subsquareLetter(c[5])) { return nil }
+        return up
     }
 
     /// Strip `<>` brackets used by WSJT-X for hashed/known callsigns so the

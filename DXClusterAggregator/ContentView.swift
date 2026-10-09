@@ -1595,6 +1595,7 @@ struct ContentView: View {
             dialFrequency: freqHz,
             sourceName: clusterSpot.sourceName
         )
+        spot.comment = clusterSpot.comment
 
         classifySpot(&spot)
         spots.append(spot)
