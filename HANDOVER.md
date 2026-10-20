@@ -4,10 +4,10 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.7 (released + notarized 2026-10-09 — the cluster
-line in RBN Aggregator's shape with relayed comments verbatim, and the update
-dialog that stays out of the way; v1.8.6, the same day, added the update
-check). Installed at
+**Current version:** v1.8.8 (released + notarized 2026-10-20 — a decode
+whose sender is an unresolved hash, `CP6CL <...> RR73`, no longer spots the
+station being called; v1.8.7 on 2026-10-09 put the cluster line in RBN
+Aggregator's shape). Installed at
 `/Applications/DXClusterAggregator.app` (not running — it stays closed while a
 dxca instance holds the same ports).
 · **SHELVED / MAINTENANCE MODE** — superseded by DXCA 2.0 (`vu2cpl/dxca`),
@@ -20,7 +20,7 @@ a 403) were both worth fixing in the fallback. v1.8.6 adds the update
 check shared by all five VU2CPL Swift apps. The release pipeline
 (`./notarize.sh`) remains fully scripted, fixed for Swift 6.4 on 2026-10-09.
 
-**Last updated:** 2026-10-20 (on `main`, unreleased: a decode whose sender is an unresolved hash no longer spots the station being called. Previously 2026-10-09: v1.8.7 released)
+**Last updated:** 2026-10-20 (v1.8.8 released: an unresolved-hash sender spots nobody)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -313,6 +313,24 @@ committed to the repo (see conventions below).
 ---
 
 ## Recent history
+
+- **2026-10-20 — v1.8.8 released** (notarized + stapled, universal), carrying
+  the entry below. Manoj: *"release the mac app too"*, after dxca v2.23.3.
+  https://github.com/vu2cpl/DXClusterAggregator-macOS/releases/tag/v1.8.8 —
+  asset `DXClusterAggregator-1.8.8-notarized-universal.zip` (2,106,228
+  bytes), SHA-256
+  `b6fc922db9bbe1bf8b36ccf064406e41d820b86239ca2fb23466150f37620ec6`.
+  - Footer, `generate_manual.py` (PDF regenerated with Homebrew
+    `python3.14`, the only Python here with `reportlab`) and the README's
+    `Info.plist` example bumped first.
+  - Release commit `03abcf9`, annotated tag `v1.8.8`, both pushed.
+  - `./notarize.sh 1.8.8` ran clean: SDK 27.0, `minos 14.0`, both slices,
+    key injected and cleared (tree clean after), notary `Accepted`, stapled.
+  - The asset was downloaded back and checked: sha256 equal, `codesign
+    --strict`, `spctl` (Notarized Developer ID), `stapler validate`,
+    `x86_64 arm64`, version 1.8.8, binary identical to the build.
+  - Installed over the 1.8.7 copy at `/Applications/DXClusterAggregator.app`
+    (not running before or after). `releases/latest` answers v1.8.8.
 
 - **2026-10-20 (released in v1.8.8) — an unresolved-hash sender spots
   nobody.** Manoj: *"fix the swift app too"*, after dxca v2.23.2 shipped
