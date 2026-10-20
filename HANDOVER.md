@@ -314,8 +314,8 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
-- **2026-10-20 — an unresolved-hash sender spots nobody (on `main`,
-  unreleased).** Manoj: *"fix the swift app too"*, after dxca v2.23.2 shipped
+- **2026-10-20 (released in v1.8.8) — an unresolved-hash sender spots
+  nobody.** Manoj: *"fix the swift app too"*, after dxca v2.23.2 shipped
   the same fix. JTDX showed `CP6CL 7P8GE -08` at 408 Hz, then
   `CP6CL <...> RR73` at the same 408 Hz: 7P8GE signing off, its own call a
   hash JTDX had not resolved. `dxCallsign` fell back from `<...>` to
