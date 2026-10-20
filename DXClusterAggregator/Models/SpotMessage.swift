@@ -59,9 +59,16 @@ struct SpotMessage: Identifiable {
             return looksLikeCallsign(parts[1]) ? Self.stripCallDecoration(parts[1]) : nil
         }
 
+        // `CALL <...> RR73`: parts[1] is the sender, and it hashed its own
+        // call — the decoder never resolved it. The one full call is the
+        // station being CALLED, which may not be on the air at all; falling
+        // back to it spotted (and alerted on) CP6CL at 7P8GE's offset,
+        // because 7P8GE was finishing a QSO with him. Nobody to spot.
+        if senderIsUnresolvedHash { return nil }
+
         // Two-station exchange. Prefer parts[1] (the calling/transmitting
         // station — the one this spotter is hearing), fall back to parts[0]
-        // if parts[1] is decoration (hashed/placeholder/grid/report).
+        // if parts[1] is decoration (placeholder/grid/report).
         if looksLikeCallsign(parts[1]) {
             return Self.stripCallDecoration(parts[1])
         }
@@ -69,6 +76,19 @@ struct SpotMessage: Identifiable {
             return Self.stripCallDecoration(parts[0])
         }
         return nil
+    }
+
+    /// What WSJT-X / JTDX / MSHV print for a hashed call they cannot resolve.
+    static let unresolvedHash = "<...>"
+
+    /// Is the SENDER of this exchange (parts[1]) a hashed call the decoder
+    /// could not resolve? Such a decode names only the station being called,
+    /// so it is never spotted, alerted on or rebroadcast.
+    var senderIsUnresolvedHash: Bool {
+        let parts = message.split(separator: " ").map(String.init)
+        return parts.count >= 2
+            && parts[0].uppercased() != "CQ"
+            && parts[1] == Self.unresolvedHash
     }
 
     var isCQ: Bool {

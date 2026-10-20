@@ -20,7 +20,7 @@ a 403) were both worth fixing in the fallback. v1.8.6 adds the update
 check shared by all five VU2CPL Swift apps. The release pipeline
 (`./notarize.sh`) remains fully scripted, fixed for Swift 6.4 on 2026-10-09.
 
-**Last updated:** 2026-10-09 (v1.8.7 released: the cluster line in Aggregator's shape; v1.8.6 released earlier the same day; `notarize.sh` fixed for Swift 6.4)
+**Last updated:** 2026-10-20 (on `main`, unreleased: a decode whose sender is an unresolved hash no longer spots the station being called. Previously 2026-10-09: v1.8.7 released)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -313,6 +313,24 @@ committed to the repo (see conventions below).
 ---
 
 ## Recent history
+
+- **2026-10-20 — an unresolved-hash sender spots nobody (on `main`,
+  unreleased).** Manoj: *"fix the swift app too"*, after dxca v2.23.2 shipped
+  the same fix. JTDX showed `CP6CL 7P8GE -08` at 408 Hz, then
+  `CP6CL <...> RR73` at the same 408 Hz: 7P8GE signing off, its own call a
+  hash JTDX had not resolved. `dxCallsign` fell back from `<...>` to
+  parts[0] and spotted **CP6CL**, the station being called.
+  - `dxCallsign` now returns `nil` when parts[1] is `<...>`, through a new
+    `senderIsUnresolvedHash`.
+  - `handleDecode` returns right after storing the spot and the (no-op)
+    notify, so such a decode reaches neither the TCP feed nor any UDP
+    destination. Unfiltered destinations take every spot regardless of the
+    filters, so without this they would have received an `UNKNOWN` line.
+  - The verbatim passthrough already relayed the datagram before parsing.
+  - `<...> W9HT/VP9 RRR` (hashed addressee, full sender) still spots the
+    sender.
+  - Checked: `swift build`, plus 9 extractor cases compiled against
+    `SpotMessage.swift` in a scratch driver (the package has no test target).
 
 - **2026-10-09 (afternoon) — v1.8.7 released** (notarized + stapled,
   universal), carrying the two entries below. Manoj: *"release the mac app

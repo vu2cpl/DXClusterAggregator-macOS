@@ -1253,6 +1253,13 @@ struct ContentView: View {
         // Push notifications (Telegram + system) for matching alerts, with per-call cooldown
         maybeNotify(spot)
 
+        // `CP6CL <...> RR73` has no callsign (see SpotMessage.dxCallsign).
+        // Rebroadcasting it would put a spot of nobody — "UNKNOWN" — on the
+        // TCP feed and on every unfiltered UDP destination, which take every
+        // spot. It stays in the table; the verbatim passthrough already
+        // relayed the datagram before it was parsed.
+        if spot.senderIsUnresolvedHash { return }
+
         // The local TCP server + filtered UDP destinations only get spots
         // that pass display filters AND aren't recent dupes. Unfiltered UDP
         // destinations (e.g. RBN feeds) get every spot — the broadcaster
