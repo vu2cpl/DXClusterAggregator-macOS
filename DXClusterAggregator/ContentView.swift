@@ -1253,12 +1253,15 @@ struct ContentView: View {
         // Push notifications (Telegram + system) for matching alerts, with per-call cooldown
         maybeNotify(spot)
 
-        // `CP6CL <...> RR73` has no callsign (see SpotMessage.dxCallsign).
+        // A spot with no callsign stays in the table and goes nowhere else.
         // Rebroadcasting it would put a spot of nobody — "UNKNOWN" — on the
         // TCP feed and on every unfiltered UDP destination, which take every
-        // spot. It stays in the table; the verbatim passthrough already
-        // relayed the datagram before it was parsed.
-        if spot.senderIsUnresolvedHash { return }
+        // spot. What has no callsign: `CP6CL <...> RR73` (see
+        // SpotMessage.dxCallsign), free text such as `TNX 73 GL`, and in
+        // handleClusterSpot a relayed spot whose call cell is not a call. The
+        // verbatim passthrough already relayed the datagram before it was
+        // parsed.
+        guard let call = spot.dxCallsign else { return }
 
         // The local TCP server + filtered UDP destinations only get spots
         // that pass display filters AND aren't recent dupes. Unfiltered UDP
@@ -1273,7 +1276,7 @@ struct ContentView: View {
         udpBroadcaster.broadcast(
             clusterLine: clusterMessage,
             sourceName: spot.sourceName,
-            callsign: spot.dxCallsign,
+            callsign: call,
             frequencyHz: spot.dialFrequency + UInt64(spot.deltaFrequency),
             snr: spot.snr,
             mode: spot.mode,
@@ -1608,6 +1611,11 @@ struct ContentView: View {
         spots.append(spot)
         maybeNotify(spot)
 
+        // A call cell that is not a call (VU2OY's RBN Aggregator spotted `EU`,
+        // which became `CQ EU`) leaves the spot with no callsign: it stays in
+        // the table and goes nowhere else (see handleDecode).
+        guard let call = spot.dxCallsign else { return }
+
         // See note in handleDecode: filtered destinations + TCP server only
         // get spots passing display filters; unfiltered destinations get all.
         let passesFilters = shouldShow(spot) && !isRecentlyBroadcast(spot)
@@ -1619,7 +1627,7 @@ struct ContentView: View {
         udpBroadcaster.broadcast(
             clusterLine: clusterMessage,
             sourceName: spot.sourceName,
-            callsign: spot.dxCallsign,
+            callsign: call,
             frequencyHz: spot.dialFrequency,
             snr: spot.snr,
             mode: spot.mode,

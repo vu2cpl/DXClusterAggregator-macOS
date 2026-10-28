@@ -11,7 +11,8 @@ Aggregator's shape). Installed at
 `/Applications/DXClusterAggregator.app` (not running — it stays closed while a
 dxca instance holds the same ports).
 · **SHELVED / MAINTENANCE MODE** — superseded by DXCA 2.0 (`vu2cpl/dxca`),
-in production on noderedpi4 since 2026-08-27. This app is the tested
+in production since 2026-08-27 (noderedpi4, then the .109 Docker container
+since 2026-09-22). This app is the tested
 fallback: no planned work, fixes only if the fallback is ever needed.
 v1.8.4 was called the final *feature* release and that still holds —
 v1.8.5 exists because a first-run wall (every user obtaining their own
@@ -20,7 +21,7 @@ a 403) were both worth fixing in the fallback. v1.8.6 adds the update
 check shared by all five VU2CPL Swift apps. The release pipeline
 (`./notarize.sh`) remains fully scripted, fixed for Swift 6.4 on 2026-10-09.
 
-**Last updated:** 2026-10-20 (v1.8.8 released: an unresolved-hash sender spots nobody)
+**Last updated:** 2026-10-28 (on `main`, unreleased: a spot with no callsign is never rebroadcast. Previously 2026-10-20: v1.8.8 released)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -313,6 +314,31 @@ committed to the repo (see conventions below).
 ---
 
 ## Recent history
+
+- **2026-10-28 — a spot with no callsign is never rebroadcast (on `main`,
+  unreleased).** Manoj: *"fix the swift app too"*, after dxca v2.23.4 shipped
+  the same fix to the whole fleet. v1.8.8 stopped only the `CP6CL <...> RR73`
+  shape. Any other spot with no callsign still went to the TCP feed and the
+  UDP destinations as an `UNKNOWN` line (`ClusterFormatter`'s fallback). It
+  never counted as a duplicate, because it has no dedupe key. Seen live in
+  dxca: VU2OY's RBN Aggregator relayed a spot with `EU` in the call cell. A
+  cluster spot becomes the message `CQ <call>`, so it was `CQ EU`, and `EU`
+  fails `looksLikeCallsign`. Free text such as `TNX 73 GL` takes the same
+  path.
+  - `handleDecode` now does `guard let call = spot.dxCallsign else { return }`
+    where it had `if spot.senderIsUnresolvedHash { return }`. The guard
+    comes after storing the spot and the notify (`maybeNotify` already skips
+    a spot with no call).
+  - **`handleClusterSpot` gets the same guard.** It never had one, so a
+    relayed `EU` went out as `UNKNOWN` from v1.x all along.
+  - Both pass `call` to the UDP broadcaster. `senderIsUnresolvedHash` stays,
+    since `dxCallsign` uses it.
+  - Checked: `swift build`, plus a scratch driver compiled against
+    `SpotMessage.swift`: `CQ EU`, `TNX 73 GL` and `CP6CL <...> RR73` give
+    `nil`, while `CP6CL 7P8GE -08`, `CQ K1JT FN20` and `<...> W9HT/VP9 RRR`
+    give 7P8GE, K1JT and W9HT/VP9. The package has no test target, and the
+    app was not launched: it would log in to the cluster nodes as VU2CPL
+    alongside .109's dxca.
 
 - **2026-10-20 — v1.8.8 released** (notarized + stapled, universal), carrying
   the entry below. Manoj: *"release the mac app too"*, after dxca v2.23.3.
