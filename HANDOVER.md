@@ -315,6 +315,27 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
+- **2026-10-28 — v1.8.9 released** (notarized + stapled, universal), carrying
+  the entry below. Manoj: *"merge #3 and release v1.8.9"*, after dxca v2.23.4.
+  https://github.com/vu2cpl/DXClusterAggregator-macOS/releases/tag/v1.8.9 —
+  asset `DXClusterAggregator-1.8.9-notarized-universal.zip` (2,106,342
+  bytes), SHA-256
+  `ade8a6500761860f53acc4efed3fde7fa6e74161b4917e53722520c681c214fd`.
+  - Footer, `generate_manual.py` (PDF regenerated with Homebrew
+    `python3.14`) and the README's `Info.plist` example bumped first.
+  - Release commit `fd781e0`, annotated tag `v1.8.9`, both pushed.
+  - `./notarize.sh 1.8.9` ran clean: SDK 27.0, `minos 14.0`, both slices,
+    key injected and cleared (tree clean after), notary `Accepted`
+    (`1f47ca38…`), stapled.
+  - The asset was downloaded back and checked: sha256 equal, `codesign
+    --strict`, `spctl` (Notarized Developer ID), `stapler validate`,
+    `x86_64 arm64`, version 1.8.9, binary identical to the build.
+    `releases/latest` answers v1.8.9.
+  - **Not installed:** `/Applications/DXClusterAggregator.app` is still
+    1.8.8 (not running). Replacing it was refused by the session's
+    permission check because the install wasn't asked for. To install,
+    unzip the asset and drag it over the old copy.
+
 - **2026-10-28 (released in v1.8.9) — a spot with no callsign is never
   rebroadcast.** Manoj: *"fix the swift app too"*, after dxca v2.23.4 shipped
   the same fix to the whole fleet. v1.8.8 stopped only the `CP6CL <...> RR73`
