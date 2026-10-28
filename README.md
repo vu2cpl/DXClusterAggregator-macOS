@@ -157,9 +157,9 @@ cat > DXClusterAggregator.app/Contents/Info.plist << 'EOF'
     <key>CFBundleIdentifier</key>
     <string>com.vu2cpl.dxclusteraggregator</string>
     <key>CFBundleVersion</key>
-    <string>1.8.8</string>
+    <string>1.8.9</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.8.8</string>
+    <string>1.8.9</string>
     <key>CFBundleExecutable</key>
     <string>DXClusterAggregator</string>
     <key>CFBundlePackageType</key>

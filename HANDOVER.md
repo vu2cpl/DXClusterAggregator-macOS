@@ -4,10 +4,10 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.8 (released + notarized 2026-10-20 — a decode
-whose sender is an unresolved hash, `CP6CL <...> RR73`, no longer spots the
-station being called; v1.8.7 on 2026-10-09 put the cluster line in RBN
-Aggregator's shape). Installed at
+**Current version:** v1.8.9 (2026-10-28 — a spot with no callsign is never
+rebroadcast as `UNKNOWN`, from a decoder or a cluster node; v1.8.8 on
+2026-10-20 stopped spotting the station a hashed caller was calling; v1.8.7 on
+2026-10-09 put the cluster line in RBN Aggregator's shape). Installed at
 `/Applications/DXClusterAggregator.app` (not running — it stays closed while a
 dxca instance holds the same ports).
 · **SHELVED / MAINTENANCE MODE** — superseded by DXCA 2.0 (`vu2cpl/dxca`),
@@ -21,7 +21,7 @@ a 403) were both worth fixing in the fallback. v1.8.6 adds the update
 check shared by all five VU2CPL Swift apps. The release pipeline
 (`./notarize.sh`) remains fully scripted, fixed for Swift 6.4 on 2026-10-09.
 
-**Last updated:** 2026-10-28 (on `main`, unreleased: a spot with no callsign is never rebroadcast. Previously 2026-10-20: v1.8.8 released)
+**Last updated:** 2026-10-28 (v1.8.9: a spot with no callsign is never rebroadcast)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -315,8 +315,8 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
-- **2026-10-28 — a spot with no callsign is never rebroadcast (on `main`,
-  unreleased).** Manoj: *"fix the swift app too"*, after dxca v2.23.4 shipped
+- **2026-10-28 (released in v1.8.9) — a spot with no callsign is never
+  rebroadcast.** Manoj: *"fix the swift app too"*, after dxca v2.23.4 shipped
   the same fix to the whole fleet. v1.8.8 stopped only the `CP6CL <...> RR73`
   shape. Any other spot with no callsign still went to the TCP feed and the
   UDP destinations as an `UNKNOWN` line (`ClusterFormatter`'s fallback). It
@@ -333,6 +333,7 @@ committed to the repo (see conventions below).
     relayed `EU` went out as `UNKNOWN` from v1.x all along.
   - Both pass `call` to the UDP broadcaster. `senderIsUnresolvedHash` stays,
     since `dxCallsign` uses it.
+  - Merged as #3 (squash `a93646b`).
   - Checked: `swift build`, plus a scratch driver compiled against
     `SpotMessage.swift`: `CQ EU`, `TNX 73 GL` and `CP6CL <...> RR73` give
     `nil`, while `CP6CL 7P8GE -08`, `CQ K1JT FN20` and `<...> W9HT/VP9 RRR`
