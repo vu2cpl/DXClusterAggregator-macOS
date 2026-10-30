@@ -21,7 +21,7 @@ a 403) were both worth fixing in the fallback. v1.8.6 adds the update
 check shared by all five VU2CPL Swift apps. The release pipeline
 (`./notarize.sh`) remains fully scripted, fixed for Swift 6.4 on 2026-10-09.
 
-**Last updated:** 2026-10-28 (v1.8.9: a spot with no callsign is never rebroadcast)
+**Last updated:** 2026-10-30 (v1.8.9 installed; released 2026-10-28: a spot with no callsign is never rebroadcast)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -331,10 +331,12 @@ committed to the repo (see conventions below).
     --strict`, `spctl` (Notarized Developer ID), `stapler validate`,
     `x86_64 arm64`, version 1.8.9, binary identical to the build.
     `releases/latest` answers v1.8.9.
-  - **Not installed:** `/Applications/DXClusterAggregator.app` is still
-    1.8.8 (not running). Replacing it was refused by the session's
-    permission check because the install wasn't asked for. To install,
-    unzip the asset and drag it over the old copy.
+  - **Installed by Manoj on 2026-10-30.** Claude's own attempt on 10-28
+    was refused by the session's permission check because the install
+    hadn't been asked for. Checked afterwards:
+    `/Applications/DXClusterAggregator.app` is 1.8.9, `spctl` accepts it
+    (Notarized Developer ID), its binary is byte-identical to the release
+    build, and it is not running.
 
 - **2026-10-28 (released in v1.8.9) — a spot with no callsign is never
   rebroadcast.** Manoj: *"fix the swift app too"*, after dxca v2.23.4 shipped
