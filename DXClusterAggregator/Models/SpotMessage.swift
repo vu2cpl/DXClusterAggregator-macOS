@@ -125,7 +125,7 @@ struct SpotMessage: Identifiable {
 
     /// Reject FT8 tokens that aren't callsigns: RR73 / RRR / 73 / TU /
     /// signal reports (R+05, -12, +03) / 4-char Maidenhead grids (LL85) /
-    /// hashed-call placeholder `<...>`.
+    /// hashed-call placeholder `<...>` / anything starting with Q.
     private func looksLikeCallsign(_ s: String) -> Bool {
         let upper = s.uppercased()
         let core: String = {
@@ -136,6 +136,15 @@ struct SpotMessage: Identifiable {
         }()
         if core.isEmpty || core == "..." { return false }
         if core.count < 3 || core.count > 11 { return false }
+
+        // No callsign starts with Q: the ITU has never allocated the Q
+        // series, which belongs to the Q-codes. Free text a skimmer spotted
+        // as a call passed every other check here: `QSLCARD73` from VU2OY's
+        // RBN Aggregator (2026-11-12) is letters and digits with one of each.
+        // First character only: `4X1KS/QRP` and `3E2QRP` are real. Same rule
+        // as dxca v2.24.4, where it was checked against 234k LoTW calls and
+        // ClubLog's prefixes and exceptions: none starts with Q.
+        if core.hasPrefix("Q") { return false }
 
         let blacklist: Set<String> = ["RR73", "RRR", "73", "TU", "TNX", "QSL", "DE", "TEST", "CQ"]
         if blacklist.contains(core) { return false }

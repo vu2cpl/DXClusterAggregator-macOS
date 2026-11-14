@@ -315,6 +315,27 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
+- **2026-11-15 — no callsign starts with Q.** Manoj: *"merge and release
+  v2.24.4 mac app too"*, after dxca v2.24.4 (dxca #16). VU2OY's RBN
+  Aggregator put the FT8 free text `QSLCARD73` in a spot's call cell, and
+  VU2PTT's DXCA relayed it ("Unknown location" on his bandmap). A cluster
+  spot becomes `CQ <call>`, and `QSLCARD73` passed `looksLikeCallsign`: 3–11
+  letters and digits with one of each. This app would have relayed it the
+  same way.
+  - `looksLikeCallsign` now rejects a leading Q. The ITU never allocates the
+    Q series; it is the Q-codes'. None of 234,467 LoTW calls, ClubLog's
+    prefixes or its exception calls starts with Q. First character only:
+    `4X1KS/QRP` and `3E2QRP` are real. Such a spot now takes v1.8.9's path:
+    stored, never rebroadcast.
+  - Rejected, as in dxca: "ends in a letter" loses BV100 / TM380 / LM1814;
+    "two letters at most before the digit" loses Austria's OEM… calls.
+  - Checked: `swift build`, plus a scratch driver compiled against
+    `SpotMessage.swift`: `CQ QSLCARD73`, `CQ <QSLCARD73>`, `CQ QSO4U` give
+    `nil`; `CQ 4X1KS/QRP`, `CQ 3E2QRP`, `CQ 4L6QL` give those calls; the
+    v1.8.9 cases (`CQ EU`, `TNX 73 GL`, `CP6CL <...> RR73` → `nil`;
+    `CQ K1JT FN20`, `CP6CL 7P8GE -08`, `<...> W9HT/VP9 RRR` → K1JT, 7P8GE,
+    W9HT/VP9) are unchanged.
+
 - **2026-10-28 — v1.8.9 released** (notarized + stapled, universal), carrying
   the entry below. Manoj: *"merge #3 and release v1.8.9"*, after dxca v2.23.4.
   https://github.com/vu2cpl/DXClusterAggregator-macOS/releases/tag/v1.8.9 —
