@@ -4,7 +4,9 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.9 (2026-10-28 — a spot with no callsign is never
+**Current version:** v1.8.10 (2026-11-15 — no callsign starts with Q, so
+free text like `QSLCARD73` is never relayed as a call; v1.8.9 on 2026-10-28:
+a spot with no callsign is never
 rebroadcast as `UNKNOWN`, from a decoder or a cluster node; v1.8.8 on
 2026-10-20 stopped spotting the station a hashed caller was calling; v1.8.7 on
 2026-10-09 put the cluster line in RBN Aggregator's shape). Installed at
@@ -21,7 +23,7 @@ a 403) were both worth fixing in the fallback. v1.8.6 adds the update
 check shared by all five VU2CPL Swift apps. The release pipeline
 (`./notarize.sh`) remains fully scripted, fixed for Swift 6.4 on 2026-10-09.
 
-**Last updated:** 2026-10-30 (v1.8.9 installed; released 2026-10-28: a spot with no callsign is never rebroadcast)
+**Last updated:** 2026-11-15 (v1.8.10 released: no callsign starts with Q; the installed app is still 1.8.9)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -315,7 +317,7 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
-- **2026-11-15 — no callsign starts with Q.** Manoj: *"merge and release
+- **2026-11-15 (released in v1.8.10) — no callsign starts with Q.** Manoj: *"merge and release
   v2.24.4 mac app too"*, after dxca v2.24.4 (dxca #16). VU2OY's RBN
   Aggregator put the FT8 free text `QSLCARD73` in a spot's call cell, and
   VU2PTT's DXCA relayed it ("Unknown location" on his bandmap). A cluster
@@ -335,6 +337,7 @@ committed to the repo (see conventions below).
     v1.8.9 cases (`CQ EU`, `TNX 73 GL`, `CP6CL <...> RR73` → `nil`;
     `CQ K1JT FN20`, `CP6CL 7P8GE -08`, `<...> W9HT/VP9 RRR` → K1JT, 7P8GE,
     W9HT/VP9) are unchanged.
+  - Merged as #4 (squash `ac861b9`).
 
 - **2026-10-28 — v1.8.9 released** (notarized + stapled, universal), carrying
   the entry below. Manoj: *"merge #3 and release v1.8.9"*, after dxca v2.23.4.
