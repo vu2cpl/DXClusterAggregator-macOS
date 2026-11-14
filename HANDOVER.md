@@ -4,13 +4,15 @@ Cold-start doc for picking this project back up. If you read only one file
 to get oriented, read this one. Pairs with `README.md` (end-user facing) and
 the in-app About line.
 
-**Current version:** v1.8.10 (2026-11-15 — no callsign starts with Q, so
-free text like `QSLCARD73` is never relayed as a call; v1.8.9 on 2026-10-28:
-a spot with no callsign is never
+**Current version:** v1.8.10 **tagged but NOT released** (2026-11-15 — no
+callsign starts with Q, so free text like `QSLCARD73` is never relayed as a
+call). Notarization was refused: Apple's 403 "required agreement is missing
+or has expired"; see *Recent history*. The latest published release is
+v1.8.9 (2026-10-28: a spot with no callsign is never
 rebroadcast as `UNKNOWN`, from a decoder or a cluster node; v1.8.8 on
 2026-10-20 stopped spotting the station a hashed caller was calling; v1.8.7 on
-2026-10-09 put the cluster line in RBN Aggregator's shape). Installed at
-`/Applications/DXClusterAggregator.app` (not running — it stays closed while a
+2026-10-09 put the cluster line in RBN Aggregator's shape). v1.8.9 is
+installed at `/Applications/DXClusterAggregator.app` (not running — it stays closed while a
 dxca instance holds the same ports).
 · **SHELVED / MAINTENANCE MODE** — superseded by DXCA 2.0 (`vu2cpl/dxca`),
 in production since 2026-08-27 (noderedpi4, then the .109 Docker container
@@ -23,7 +25,7 @@ a 403) were both worth fixing in the fallback. v1.8.6 adds the update
 check shared by all five VU2CPL Swift apps. The release pipeline
 (`./notarize.sh`) remains fully scripted, fixed for Swift 6.4 on 2026-10-09.
 
-**Last updated:** 2026-11-15 (v1.8.10 released: no callsign starts with Q; the installed app is still 1.8.9)
+**Last updated:** 2026-11-15 (v1.8.10 tagged, notarization blocked by an unsigned Apple agreement, no release yet; installed app is 1.8.9)
 **Repo:** https://github.com/vu2cpl/DXClusterAggregator-macOS (branch: `main`)
 
 ---
@@ -317,7 +319,23 @@ committed to the repo (see conventions below).
 
 ## Recent history
 
-- **2026-11-15 (released in v1.8.10) — no callsign starts with Q.** Manoj: *"merge and release
+- **2026-11-15 — v1.8.10 tagged, NOT released: Apple refused notarization.**
+  Release commit `0f76a26` and annotated tag `v1.8.10` are on GitHub, with
+  the footer, `generate_manual.py` (PDF regenerated with Homebrew
+  `python3.14`) and the README's `Info.plist` example at 1.8.10.
+  `./notarize.sh 1.8.10` built and signed cleanly (SDK 27.2, `minos 14.0`,
+  x86_64 + arm64, key injected and cleared, tree clean after), then
+  `notarytool` answered **HTTP 403: "A required agreement is missing or has
+  expired"**. That is an Apple Developer Program agreement waiting to be
+  accepted on Manoj's account, not a fault in the script or the profile.
+  There is **no GitHub release for v1.8.10**, so `releases/latest` still
+  answers v1.8.9. **To finish:** Manoj accepts the agreement
+  (developer.apple.com › Account), then re-run `./notarize.sh 1.8.10` from
+  a checkout of the tag and attach the zip to a v1.8.10 release. No code
+  change is needed. (The SDK-27.2 build also warned that x86_64 is
+  deprecated; it still built both slices.)
+
+- **2026-11-15 (in v1.8.10, unreleased) — no callsign starts with Q.** Manoj: *"merge and release
   v2.24.4 mac app too"*, after dxca v2.24.4 (dxca #16). VU2OY's RBN
   Aggregator put the FT8 free text `QSLCARD73` in a spot's call cell, and
   VU2PTT's DXCA relayed it ("Unknown location" on his bandmap). A cluster
